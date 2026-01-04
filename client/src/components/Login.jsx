@@ -113,20 +113,6 @@ const Login = ({ onLogin }) => {
                     Don't have an account? Create one
                 </Link>
             </div>
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Demo Access</span>
-                </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-500 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                <div><span className="font-semibold">Admin:</span> admin / admin123</div>
-                <div><span className="font-semibold">Liaison:</span> liaison / liaison123</div>
-                <div><span className="font-semibold">HR:</span> hr / hr123</div>
-                <div><span className="font-semibold">Staff:</span> peachtree_staff / user123</div>
-            </div>
         </div>
       </div>
     </div>

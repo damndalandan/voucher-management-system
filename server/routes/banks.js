@@ -123,4 +123,77 @@ router.get('/banks/:id/checks', authenticateToken, (req, res) => {
     });
 });
 
+// Update Transaction
+router.put('/transactions/:id', authenticateToken, (req, res) => {
+    const { transaction_date, amount } = req.body;
+    const { id } = req.params;
+    const { role } = req.user;
+
+    if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can edit transaction details" });
+    }
+
+    db.get("SELECT * FROM bank_transactions WHERE id = ?", [id], (err, tx) => {
+        if (err || !tx) return res.status(404).json({ error: "Transaction not found" });
+
+        const newDate = transaction_date || tx.transaction_date;
+        const newAmount = (amount !== undefined && amount !== null && amount !== '') ? parseFloat(amount) : tx.amount;
+
+        db.serialize(() => {
+            // 1. Update the target transaction first
+            db.run("UPDATE bank_transactions SET transaction_date = ?, amount = ? WHERE id = ?", 
+                [newDate, newAmount, id], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    // 2. Recalculate ALL balances for this account from top to bottom
+                    db.all("SELECT * FROM bank_transactions WHERE bank_account_id = ? ORDER BY transaction_date ASC, id ASC", 
+                        [tx.bank_account_id], (err, transactions) => {
+                        if (err) return res.status(500).json({ error: err.message });
+
+                        let runningBalance = 0;
+                        const updateStmt = db.prepare("UPDATE bank_transactions SET running_balance = ? WHERE id = ?");
+
+                        transactions.forEach(t => {
+                            const amt = parseFloat(t.amount);
+                            // Assuming 'Deposit' adds to balance, everything else subtracts (Withdrawal, Bounced, etc.)
+                            // Adjust logic if 'Bounced' behaves differently (e.g. Bounced Check adds back money?)
+                            // Based on previous code: 
+                            // Deposit -> +
+                            // Withdrawal -> -
+                            // Bounced (if it was a check clearing) -> + (Reversal)
+                            // Void Refund -> +
+                            
+                            // However, the 'type' field in DB is what we have.
+                            // Let's look at how they are inserted.
+                            // Deposit -> 'Deposit'
+                            // Withdrawal -> 'Withdrawal'
+                            // Bounced Check Reversal -> 'Deposit' (type is Deposit, category is Reversal)
+                            // Bounced Check Fee -> 'Bounced' (type is Bounced) -> usually 0 or fee?
+                            
+                            // Simplest assumption: Deposit adds, everything else subtracts?
+                            // Let's check the 'type' column usage.
+                            
+                            if (t.type === 'Deposit') {
+                                runningBalance += amt;
+                            } else {
+                                runningBalance -= amt;
+                            }
+                            
+                            updateStmt.run(runningBalance, t.id);
+                        });
+
+                        updateStmt.finalize(() => {
+                            // 3. Update final account balance
+                            db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", 
+                                [runningBalance, tx.bank_account_id], (err) => {
+                                    if (err) return res.status(500).json({ error: err.message });
+                                    res.json({ message: "Transaction updated and passbook recalculated" });
+                                });
+                        });
+                    });
+                });
+        });
+    });
+});
+
 module.exports = router;

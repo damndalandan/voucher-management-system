@@ -267,6 +267,110 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
     });
 });
 
+// Update Voucher Status
+router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const { status, void_reason } = req.body;
+    const { role, id: user_id } = req.user;
+
+    db.get("SELECT * FROM vouchers WHERE id = ?", [id], (err, currentVoucher) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
+
+        // Pre-check for duplicates if issuing
+        if (status === 'Issued' && currentVoucher.status !== 'Issued' && currentVoucher.payment_type === 'Check' && currentVoucher.check_no && currentVoucher.bank_name) {
+             db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
+                 if (err || !account) return res.status(400).json({ error: "Bank account not found" });
+                 
+                 db.get("SELECT id, voucher_id FROM checks WHERE bank_account_id = ? AND check_number = ?", [account.id, currentVoucher.check_no], (err, existingCheck) => {
+                     if (existingCheck && existingCheck.voucher_id != id) {
+                         return res.status(400).json({ error: `Check number ${currentVoucher.check_no} is already used.` });
+                     }
+                     performUpdate();
+                 });
+             });
+        } else {
+            performUpdate();
+        }
+
+        function performUpdate() {
+            const updates = ["status = ?"];
+            const params = [status];
+            
+            if (void_reason) {
+                updates.push("void_reason = ?");
+                params.push(void_reason);
+            }
+
+            params.push(id);
+
+            db.run(`UPDATE vouchers SET ${updates.join(', ')} WHERE id = ?`, params, function(err) {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Log History
+                db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
+                    [id, user_id, 'Status Update', `Status changed from ${currentVoucher.status} to ${status}`]);
+
+                // Handle Side Effects
+                if (status === 'Issued' && currentVoucher.status !== 'Issued') {
+                    if (currentVoucher.payment_type === 'Check' && currentVoucher.check_no && currentVoucher.bank_name) {
+                        db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
+                            if (!err && account) {
+                                db.get("SELECT id FROM checks WHERE voucher_id = ?", [id], (err, existingCheck) => {
+                                    if (!existingCheck) {
+                                        db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
+                                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
+                                                [account.id, id, currentVoucher.check_no, currentVoucher.check_date, new Date().toISOString(), currentVoucher.payee, currentVoucher.description, currentVoucher.amount],
+                                                (err) => {
+                                                    if (!err) {
+                                                        db.run(`UPDATE checkbooks 
+                                                                SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
+                                                                WHERE bank_account_id = ? 
+                                                                AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
+                                                                AND status = 'Active'`, 
+                                                                [currentVoucher.check_no, currentVoucher.check_no, account.id, currentVoucher.check_no]);
+                                                    }
+                                                });
+                                    } else {
+                                        db.run("UPDATE checks SET status = 'Issued' WHERE id = ?", [existingCheck.id]);
+                                    }
+                                });
+                            }
+                        });
+                    } else if (currentVoucher.payment_type === 'Encashment' && currentVoucher.bank_name) {
+                        db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
+                            if (!err && account) {
+                                const newBalance = account.current_balance - currentVoucher.amount;
+                                db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, account.id]);
+                                db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, running_balance) VALUES (?, ?, 'Withdrawal', ?, ?, ?, ?)",
+                                    [account.id, id, currentVoucher.category || 'Encashment', currentVoucher.amount, `Encashment: ${currentVoucher.payee}`, newBalance]);
+                            }
+                        });
+                    }
+                } else if (status === 'Voided' && currentVoucher.status !== 'Voided') {
+                    db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
+                        if (!err && check) {
+                            db.run("UPDATE checks SET status = 'Voided' WHERE id = ?", [check.id]);
+                            if (check.status === 'Cleared') {
+                                db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [check.bank_account_id], (err, account) => {
+                                    if (!err && account) {
+                                        const newBalance = account.current_balance + check.amount;
+                                        db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, check.bank_account_id]);
+                                        db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, check_no, running_balance) VALUES (?, ?, 'Deposit', 'Void Refund', ?, ?, ?, ?)",
+                                            [check.bank_account_id, id, check.amount, `Voided Check: ${check.payee}`, check.check_number, newBalance]);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+
+                res.json({ message: "Status updated successfully" });
+            });
+        }
+    });
+});
+
 // Get Voucher History
 router.get('/vouchers/:id/history', authenticateToken, (req, res) => {
     const { id } = req.params;
@@ -293,12 +397,18 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
     const { role, id: user_id } = req.user;
 
     db.get("SELECT * FROM vouchers WHERE id = ?", [id], (err, currentVoucher) => {
-        if (err || !currentVoucher) return res.status(404).json({ error: "Voucher not found" });
+        if (err) {
+            console.error("Error fetching voucher:", err);
+            return res.status(500).json({ error: "Database error fetching voucher: " + err.message });
+        }
+        if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
 
         if (role === 'staff') {
             if (check_no && check_no !== currentVoucher.check_no) return res.status(403).json({ error: "Staff cannot edit check number" });
             if (bank_name && bank_name !== currentVoucher.bank_name) return res.status(403).json({ error: "Staff cannot edit bank name" });
         } else if (role === 'liaison') {
+            // Liaison can edit check details, but check_no is restricted if status is 'Issued' (Admin Approved)
+            // UNLESS they are just updating the check_date (PDC date)
             if (currentVoucher.status === 'Issued' && check_no && check_no !== currentVoucher.check_no) {
                  return res.status(403).json({ error: "Cannot edit check number after Admin approval" });
             }
@@ -366,7 +476,10 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                 params.push(id);
                 
                 db.run(sql, params, function(err) {
-                    if (err) return res.status(500).json({ error: err.message });
+                    if (err) {
+                        console.error("Error updating voucher:", err);
+                        return res.status(500).json({ error: "Error updating voucher: " + err.message });
+                    }
                     
                     if (changes.length > 0) {
                         db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
@@ -386,9 +499,18 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
 
         if ((status === 'Issued' || status === 'Pending Admin') && payment_type === 'Check' && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
             db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
-                if (err || !account) return res.status(404).json({ error: "Bank account not found" });
+                if (err) {
+                    console.error("Error fetching bank account:", err);
+                    return res.status(500).json({ error: "Database error fetching bank account: " + err.message });
+                }
+                if (!account) return res.status(404).json({ error: `Bank account '${bank_name}' not found` });
 
                 db.get("SELECT id, status FROM checks WHERE voucher_id = ?", [id], (err, existingCheck) => {
+                    if (err) {
+                        console.error("Error checking existing check:", err);
+                        return res.status(500).json({ error: "Database error checking existing check: " + err.message });
+                    }
+
                     if (!existingCheck) {
                          const checkStatus = status === 'Issued' ? 'Issued' : 'Pending';
                          db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
@@ -396,10 +518,11 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                                 [account.id, id, check_no, check_date || null, new Date().toISOString(), payee || currentVoucher.payee, description || currentVoucher.description, amount || currentVoucher.amount, checkStatus],
                                 function(err) {
                                     if (err) {
+                                        console.error("Error inserting check:", err);
                                         if (err.message.includes('UNIQUE constraint failed')) {
                                             return res.status(400).json({ error: `Check number ${check_no} is already used for this bank.` });
                                         }
-                                        return res.status(500).json({ error: err.message });
+                                        return res.status(500).json({ error: "Error inserting check: " + err.message });
                                     }
                                     
                                     db.run(`UPDATE checkbooks 
@@ -407,19 +530,31 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                                             WHERE bank_account_id = ? 
                                             AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
                                             AND status = 'Active'`, 
-                                            [check_no, check_no, account.id, check_no]);
+                                            [check_no, check_no, account.id, check_no], (err) => {
+                                                if (err) console.error("Error updating checkbook:", err);
+                                            });
 
                                     executeUpdate();
                                 });
                     } else {
                         if (check_no !== currentVoucher.check_no) {
                              db.run("UPDATE checks SET check_number = ?, status = ? WHERE id = ?", [check_no, status === 'Issued' ? 'Issued' : 'Pending', existingCheck.id], (err) => {
-                                 if (err) return res.status(400).json({ error: "Check number already in use" });
+                                 if (err) {
+                                     console.error("Error updating check number:", err);
+                                     if (err.message.includes('UNIQUE constraint failed')) {
+                                         return res.status(400).json({ error: `Check number ${check_no} is already used.` });
+                                     }
+                                     return res.status(500).json({ error: "Error updating check: " + err.message });
+                                 }
                                  executeUpdate();
                              });
                         } else {
                             if (status === 'Issued' && existingCheck.status === 'Pending') {
                                 db.run("UPDATE checks SET status = 'Issued' WHERE id = ?", [existingCheck.id], (err) => {
+                                    if (err) {
+                                        console.error("Error updating check status:", err);
+                                        return res.status(500).json({ error: "Error updating check status: " + err.message });
+                                    }
                                     executeUpdate();
                                 });
                             } else {

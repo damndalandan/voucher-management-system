@@ -86,4 +86,20 @@ router.post('/checks/:id/status', authenticateToken, (req, res) => {
     });
 });
 
+// Update Check Details
+router.put('/checks/:id', authenticateToken, (req, res) => {
+    const { date_issued } = req.body;
+    const { id } = req.params;
+    const { role } = req.user;
+
+    if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can edit check details" });
+    }
+
+    db.run("UPDATE checks SET date_issued = ? WHERE id = ?", [date_issued, id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Check details updated successfully" });
+    });
+});
+
 module.exports = router;

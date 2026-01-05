@@ -212,11 +212,19 @@ function createCategoriesTable() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         company_id INTEGER,
         name TEXT NOT NULL,
+        role TEXT, -- 'hr', 'liaison', or NULL
         UNIQUE(company_id, name),
         FOREIGN KEY (company_id) REFERENCES companies(id)
     )`, (err) => {
         if (!err) {
-            // seedCategories(); // Disabled default category seeding
+            // Check if role column exists, if not add it
+            db.all("PRAGMA table_info(categories)", (err, rows) => {
+                if (!err && !rows.some(r => r.name === 'role')) {
+                    db.run("ALTER TABLE categories ADD COLUMN role TEXT", () => {
+                        console.log("Added role column to categories table");
+                    });
+                }
+            });
         }
     });
 }

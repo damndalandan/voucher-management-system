@@ -3,8 +3,9 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { resetDatabase } = require('./database');
+const { resetDatabase, closeDatabase } = require('./database');
 const syncData = require('./sync');
+const upload = require('./middleware/upload');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -42,6 +43,46 @@ app.use('/api', categoryRoutes);
 app.get('/api/backup', (req, res) => {
     const dbPath = path.resolve(__dirname, 'vouchers.db');
     res.download(dbPath, 'vouchers_backup.db');
+});
+
+app.post('/api/restore', upload.single('database'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const dbPath = path.resolve(__dirname, 'vouchers.db');
+    const uploadedPath = req.file.path;
+
+    // Close the database connection first
+    closeDatabase((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to close database connection' });
+        }
+
+        // Overwrite the database file
+        try {
+            // Need a small delay to ensure file handle is released by OS? 
+            // Usually callback is enough but Windows can be slow to release.
+            setTimeout(() => {
+                 try {
+                    fs.copyFileSync(uploadedPath, dbPath);
+                    fs.unlinkSync(uploadedPath);
+                    
+                    // Trigger server restart by touching this file
+                    const now = new Date();
+                    fs.utimesSync(__filename, now, now);
+
+                    res.json({ message: 'Database restored successfully. Server is restarting...' });
+                 } catch (e) {
+                     console.error('Error copying file:', e);
+                     res.status(500).json({ error: 'Failed to replace database file. Please check server logs.' });
+                 }
+            }, 100);
+        } catch (copyErr) {
+            console.error('Error restoring database:', copyErr);
+            res.status(500).json({ error: 'Failed to restore database file' });
+        }
+    });
 });
 
 app.post('/api/reset', (req, res) => {

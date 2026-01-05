@@ -1235,7 +1235,8 @@ const Dashboard = ({ user, onLogout }) => {
           fetchProfileRequests();
           showAlert(`Request ${action}ed`, 'success');
       } catch (err) {
-          showAlert('Error processing request', 'error');
+          const errorMessage = err.response?.data?.error || err.message || 'Error processing request';
+          showAlert(errorMessage, 'error');
       }
   };
 
@@ -1320,7 +1321,8 @@ const Dashboard = ({ user, onLogout }) => {
       setApproveModalOpen(false);
       setVoucherToApprove(null);
     } catch (err) {
-      showAlert('Error approving voucher', 'error');
+      const errorMessage = err.response?.data?.error || err.message || 'Error approving voucher';
+      showAlert(errorMessage, 'error');
     }
   };
 
@@ -1345,7 +1347,8 @@ const Dashboard = ({ user, onLogout }) => {
         message: 'The void request has been successfully submitted and is pending admin approval.'
       });
     } catch (err) {
-      showAlert('Error requesting void', 'error');
+      const errorMessage = err.response?.data?.error || err.message || 'Error requesting void';
+      showAlert(errorMessage, 'error');
     }
   };
 
@@ -1368,7 +1371,8 @@ const Dashboard = ({ user, onLogout }) => {
                 : 'The void request has been rejected and the voucher is now Issued.'
         });
     } catch (err) {
-        showAlert('Error processing void review', 'error');
+        const errorMessage = err.response?.data?.error || err.message || 'Error processing void review';
+        showAlert(errorMessage, 'error');
     }
   };
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from '../api';
-import { Trash2, UserPlus, Save, Download, RefreshCw, AlertTriangle, Printer, Layout, Database, Users, Edit, Building, Check, X, Eye, ChevronDown } from 'lucide-react';
+import { Trash2, UserPlus, Save, Download, Upload, RefreshCw, AlertTriangle, Printer, Layout, Database, Users, Edit, Building, Check, X, Eye, ChevronDown, Tag } from 'lucide-react';
 import { VoucherCopy } from './VoucherTemplate';
 
 const AlertModal = ({ isOpen, onClose, message, type }) => {
@@ -64,6 +64,7 @@ const Settings = ({ user, onBack }) => {
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [categories, setCategories] = useState([]);
   
   // Modals
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'success' });
@@ -77,6 +78,10 @@ const Settings = ({ user, onBack }) => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({ username: '', password: '', role: 'staff', company_id: '' });
+
+  // Category Modal State
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', company_id: '', role: '' });
 
   // Company Requests State (Admin)
   const [requests, setRequests] = useState([]);
@@ -102,9 +107,44 @@ const Settings = ({ user, onBack }) => {
     receivedByLabel: 'Received By'
   });
 
+  const fileInputRef = useRef(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('database', file);
+
+    setConfirmation({
+        isOpen: true,
+        title: 'Import Database',
+        message: 'WARNING: This will overwrite the current database. The system will restart. Are you sure?',
+        confirmColor: 'red',
+        confirmText: 'Import & Restart',
+        action: async () => {
+            try {
+                await axios.post('http://localhost:5000/api/restore', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                showAlert('Database restored. Reloading...', 'success');
+                setTimeout(() => window.location.reload(), 3000);
+            } catch (err) {
+                showAlert('Error restoring: ' + (err.response?.data?.error || err.message), 'error');
+            }
+        }
+    });
+    e.target.value = '';
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchCompanies();
+    fetchCategories();
     
     // Load print settings
     const savedSettings = localStorage.getItem('voucher_print_settings');
@@ -160,6 +200,16 @@ const Settings = ({ user, onBack }) => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const fetchCategories = async () => {
+      try {
+          // Fetch all categories visible to user
+          const res = await axios.get('http://localhost:5000/api/categories');
+          setCategories(res.data);
+      } catch (err) {
+          console.error(err);
+      }
   };
 
   const fetchRequests = async () => {
@@ -225,6 +275,37 @@ const Settings = ({ user, onBack }) => {
             }
         }
     });
+  };
+
+  const handleCategorySubmit = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.post('http://localhost:5000/api/categories', categoryForm);
+          showAlert('Category added successfully', 'success');
+          setShowCategoryModal(false);
+          setCategoryForm({ name: '', company_id: '', role: '' });
+          fetchCategories();
+      } catch (err) {
+          showAlert('Error adding category: ' + (err.response?.data?.error || err.message), 'error');
+      }
+  };
+
+  const handleDeleteCategory = async (id) => {
+      setConfirmation({
+          isOpen: true,
+          title: 'Delete Category',
+          message: 'Are you sure you want to delete this category?',
+          confirmColor: 'red',
+          confirmText: 'Delete',
+          action: async () => {
+              try {
+                  await axios.delete(`http://localhost:5000/api/categories/${id}`);
+                  fetchCategories();
+              } catch (err) {
+                  showAlert('Error deleting category', 'error');
+              }
+          }
+      });
   };
 
   const handleRequestSubmit = async (e) => {
@@ -408,6 +489,65 @@ const Settings = ({ user, onBack }) => {
                   )}
               </div>
           );
+      case 'categories':
+          return (
+              <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                          <Tag size={20} /> Category Management
+                      </h2>
+                      <button 
+                          onClick={() => {
+                              setCategoryForm({ name: '', company_id: '', role: '' });
+                              setShowCategoryModal(true);
+                          }}
+                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
+                      >
+                          <UserPlus size={16} /> Add Category
+                      </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                              <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category Name</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
+                                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                              </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                              {categories.map(cat => (
+                                  <tr key={cat.id}>
+                                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{cat.name}</td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                          {cat.role ? (
+                                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                  cat.role === 'hr' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
+                                              }`}>
+                                                  {cat.role.toUpperCase()} Only
+                                              </span>
+                                          ) : (
+                                              <span className="text-gray-600 flex items-center gap-1">
+                                                  <Building size={14} /> {cat.company_name || 'Unknown Company'}
+                                              </span>
+                                          )}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                                          <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-600 hover:text-red-900">
+                                              <Trash2 size={16} />
+                                          </button>
+                                      </td>
+                                  </tr>
+                              ))}
+                              {categories.length === 0 && (
+                                  <tr><td colSpan="3" className="px-6 py-8 text-center text-gray-500 italic">No categories found</td></tr>
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          );
       case 'database':
         return (
           <div className="bg-white rounded-lg shadow p-6">
@@ -418,12 +558,22 @@ const Settings = ({ user, onBack }) => {
               <button onClick={handleBackup} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
                 <Download size={16} /> Backup Database
               </button>
+              <button onClick={handleImportClick} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <Upload size={16} /> Import Database
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+                accept=".db,.sqlite,.sqlite3"
+              />
               <button onClick={handleReset} className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                 <AlertTriangle size={16} /> Reset Data
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-500">
-              Backup downloads the current database file. Reset clears all vouchers but keeps users and companies.
+              Backup downloads the current database. Import restores a previous backup (overwrites all data). Reset clears all voucher data.
             </p>
           </div>
         );
@@ -627,6 +777,12 @@ const Settings = ({ user, onBack }) => {
             <Building size={20} /> {user.role === 'admin' ? 'Requests' : 'Company Profile'}
           </button>
           <button 
+            onClick={() => setActiveTab('categories')}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${activeTab === 'categories' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+          >
+            <Tag size={20} /> Categories
+          </button>
+          <button 
             onClick={() => setActiveTab('database')}
             className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors ${activeTab === 'database' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
           >
@@ -723,6 +879,100 @@ const Settings = ({ user, onBack }) => {
                       
                       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                           <button type="button" onClick={() => setShowUserModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                          <button type="submit" className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5">Save</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
+      {/* Category Modal */}
+      {showCategoryModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all scale-100 border border-gray-100">
+                  <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                          <div className="bg-blue-600 p-1.5 rounded-lg text-white shadow-lg shadow-blue-200"><Tag size={18} /></div>
+                          Add Category
+                      </h3>
+                      <button onClick={() => setShowCategoryModal(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+                  </div>
+                  <form onSubmit={handleCategorySubmit} className="space-y-4">
+                      <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Category Name</label>
+                          <input 
+                              type="text" required
+                              className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all"
+                              value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})}
+                              placeholder="e.g. Office Supplies"
+                          />
+                      </div>
+                      
+                      {user.role === 'admin' && (
+                          <div className="group">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                <Users size={12} /> Assign To
+                              </label>
+                              <div className="relative">
+                                <select 
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 appearance-none transition-colors hover:bg-gray-100 cursor-pointer"
+                                    value={categoryForm.role || (categoryForm.company_id ? 'company' : '')} 
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === 'hr' || val === 'liaison') {
+                                            setCategoryForm({...categoryForm, role: val, company_id: ''});
+                                        } else if (val === 'company') {
+                                            setCategoryForm({...categoryForm, role: '', company_id: companies.length > 0 ? companies[0].id : ''});
+                                        } else {
+                                            setCategoryForm({...categoryForm, role: '', company_id: ''});
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select Assignment</option>
+                                    <option value="company">Specific Company</option>
+                                    <option value="hr">HR Only</option>
+                                    <option value="liaison">Liaison Only</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 group-hover:text-blue-600 transition-colors">
+                                    <ChevronDown size={16} strokeWidth={2.5} />
+                                </div>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* Show Company Select if Admin selected 'company' OR if user is HR/Liaison and wants to assign to company (optional) */}
+                      {/* But prompt says HR/Liaison create for themselves (no company). So hide company select for them unless we want to allow it. */}
+                      {/* Let's stick to prompt: HR/Liaison create for themselves. Admin can do both. */}
+                      
+                      {(user.role === 'admin' && !categoryForm.role && categoryForm.company_id !== undefined) && (
+                          <div className="group">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                <Building size={12} /> Company
+                              </label>
+                              <div className="relative">
+                                <select 
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 appearance-none transition-colors hover:bg-gray-100 cursor-pointer" required
+                                    value={categoryForm.company_id} onChange={e => setCategoryForm({...categoryForm, company_id: e.target.value})}
+                                >
+                                    <option value="">Select Company</option>
+                                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 group-hover:text-blue-600 transition-colors">
+                                    <ChevronDown size={16} strokeWidth={2.5} />
+                                </div>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* For HR/Liaison, show a note that it's for their role */}
+                      {(user.role === 'hr' || user.role === 'liaison') && (
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-700">
+                              This category will be available only for <strong>{user.role.toUpperCase()}</strong> role.
+                          </div>
+                      )}
+                      
+                      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                          <button type="button" onClick={() => setShowCategoryModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
                           <button type="submit" className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5">Save</button>
                       </div>
                   </form>

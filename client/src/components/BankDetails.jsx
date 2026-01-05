@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from '../api';
-import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X } from 'lucide-react';
+import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X, Edit } from 'lucide-react';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", confirmColor = "green" }) => {
   if (!isOpen) return null;
@@ -37,6 +37,17 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [selectedCheckId, setSelectedCheckId] = useState(null);
   const [clearDate, setClearDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Edit Date State
+  const [showEditDateModal, setShowEditDateModal] = useState(false);
+  const [selectedCheckForDateEdit, setSelectedCheckForDateEdit] = useState(null);
+  const [newDateIssued, setNewDateIssued] = useState('');
+
+  // Edit Transaction Date State
+  const [showEditTransactionDateModal, setShowEditTransactionDateModal] = useState(false);
+  const [selectedTransactionForEdit, setSelectedTransactionForEdit] = useState(null);
+  const [newTransactionDate, setNewTransactionDate] = useState('');
+  const [newTransactionAmount, setNewTransactionAmount] = useState('');
   
   // Confirmation State
   const [confirmation, setConfirmation] = useState({ isOpen: false, title: '', message: '', action: null, confirmColor: 'green', confirmText: 'Confirm' });
@@ -197,6 +208,52 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           if (onUpdate) onUpdate();
       } catch (err) {
           showAlert('Error clearing check', 'error');
+      }
+  };
+
+  const handleEditDate = (check) => {
+      setSelectedCheckForDateEdit(check);
+      setNewDateIssued(check.date_issued.split('T')[0]);
+      setShowEditDateModal(true);
+  };
+
+  const handleSaveDate = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.put(`http://localhost:5000/api/checks/${selectedCheckForDateEdit.id}`, {
+              date_issued: newDateIssued
+          });
+          setShowEditDateModal(false);
+          fetchChecks(account.id);
+          showAlert('Date issued updated successfully', 'success');
+      } catch (err) {
+          showAlert('Error updating date issued', 'error');
+      }
+  };
+
+  const handleEditTransactionDate = (tx) => {
+      setSelectedTransactionForEdit(tx);
+      setNewTransactionDate(tx.transaction_date.split('T')[0]);
+      setNewTransactionAmount(tx.amount);
+      setShowEditTransactionDateModal(true);
+  };
+
+  const handleSaveTransactionDate = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.put(`http://localhost:5000/api/transactions/${selectedTransactionForEdit.id}`, {
+              transaction_date: newTransactionDate,
+              amount: newTransactionAmount
+          });
+          setShowEditTransactionDateModal(false);
+          fetchTransactions(account.id);
+          fetchChecks(account.id); // Refresh checks too as balance might affect logic? No, but good practice.
+          // We need to refresh account balance in parent component
+          if (onUpdate) onUpdate();
+          
+          showAlert('Transaction updated successfully', 'success');
+      } catch (err) {
+          showAlert('Error updating transaction', 'error');
       }
   };
 
@@ -409,7 +466,18 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                     {filteredChecks.map(check => (
                                         <tr key={check.id} className="hover:bg-blue-50/30 transition-colors group">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                                {new Date(check.date_issued).toLocaleDateString()}
+                                                <div className="flex items-center gap-2">
+                                                    {new Date(check.date_issued).toLocaleDateString()}
+                                                    {user.role === 'admin' && (
+                                                        <button 
+                                                            onClick={() => handleEditDate(check)}
+                                                            className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                            title="Edit Date Issued"
+                                                        >
+                                                            <Edit size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                                                 {check.check_date ? (
@@ -502,9 +570,20 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {filteredTransactions.map(tx => (
-                                        <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={tx.id} className="hover:bg-gray-50 transition-colors group">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-                                                {new Date(tx.transaction_date).toLocaleDateString()}
+                                                <div className="flex items-center gap-2">
+                                                    {new Date(tx.transaction_date).toLocaleDateString()}
+                                                    {user.role === 'admin' && (
+                                                        <button 
+                                                            onClick={() => handleEditTransactionDate(tx)}
+                                                            className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                            title="Edit Transaction Date"
+                                                        >
+                                                            <Edit size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
                                                 {tx.check_no ? <span className="bg-gray-100 px-2 py-1 rounded text-xs font-bold">{tx.check_no}</span> : '-'}
@@ -710,6 +789,93 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                 <button type="button" onClick={() => setShowClearModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
                 <button type="submit" className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all transform hover:-translate-y-0.5">
                     Confirm Clear
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditDateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl w-96 shadow-2xl transform transition-all scale-100 border border-gray-100">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                        <Edit size={18} />
+                    </div>
+                    Edit Date Issued
+                </h3>
+                <button onClick={() => setShowEditDateModal(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveDate} className="space-y-4">
+                <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">New Date Issued</label>
+                    <input 
+                        type="date"
+                        className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all"
+                        value={newDateIssued}
+                        onChange={e => setNewDateIssued(e.target.value)}
+                        required
+                    />
+                </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowEditDateModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5">
+                    Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditTransactionDateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl w-96 shadow-2xl transform transition-all scale-100 border border-gray-100">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                        <Edit size={18} />
+                    </div>
+                    Edit Transaction
+                </h3>
+                <button onClick={() => setShowEditTransactionDateModal(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveTransactionDate} className="space-y-4">
+                <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Transaction Date</label>
+                    <input 
+                        type="date"
+                        className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all"
+                        value={newTransactionDate}
+                        onChange={e => setNewTransactionDate(e.target.value)}
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Amount</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-400 font-bold">₱</span>
+                        <input 
+                            type="number"
+                            step="0.01"
+                            className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
+                            value={newTransactionAmount}
+                            onChange={e => setNewTransactionAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <p className="mt-2 text-xs text-red-500 font-medium">
+                        Warning: Changing the amount will recalculate the running balance for all subsequent transactions.
+                    </p>
+                </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowEditTransactionDateModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5">
+                    Save Changes
                 </button>
               </div>
             </form>

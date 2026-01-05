@@ -274,7 +274,8 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
   const canEditCheckDetails = user.role === 'liaison' || user.role === 'admin';
   const canEditCheckNo = canEditCheckDetails && !(user.role === 'liaison' && initialData?.status === 'Issued');
 
-  if (isLiaisonProcessing) {
+  // Disabled specialized view to allow full editing for Liaison
+  if (false && isLiaisonProcessing) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
@@ -509,7 +510,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     icon={Calendar}
                     name="date" 
                     required 
-                    disabled={isLiaisonProcessing}
                     value={formData.date} 
                     onChange={handleChange} 
                 />
@@ -521,7 +521,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     label="Deadline" 
                     icon={Clock}
                     name="deadline_date" 
-                    disabled={isLiaisonProcessing}
                     value={formData.deadline_date} 
                     onChange={handleChange} 
                 />
@@ -535,7 +534,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     icon={User}
                     name="payee" 
                     required 
-                    disabled={isLiaisonProcessing}
                     placeholder="Enter payee name"
                     value={formData.payee} 
                     onChange={handleChange} 
@@ -547,7 +545,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     label="Category" 
                     icon={Tag}
                     name="category" 
-                    disabled={isLiaisonProcessing}
                     value={formData.category} 
                     onChange={handleChange}
                 >
@@ -570,7 +567,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                             name="amount" 
                             step="0.01" 
                             required 
-                            disabled={isLiaisonProcessing}
                             className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                             placeholder="0.00"
                             value={formData.amount} 
@@ -587,7 +583,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     icon={AlignLeft}
                     name="amount_in_words" 
                     required 
-                    disabled={isLiaisonProcessing}
                     placeholder="e.g. One Thousand Pesos Only"
                     value={formData.amount_in_words} 
                     onChange={handleChange} 
@@ -600,7 +595,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     label="Payment Type" 
                     icon={CreditCard}
                     name="payment_type" 
-                    disabled={isLiaisonProcessing}
                     value={formData.payment_type} 
                     onChange={handleChange}
                 >
@@ -614,7 +608,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     label="Urgency" 
                     icon={AlertTriangle}
                     name="urgency" 
-                    disabled={isLiaisonProcessing}
                     value={formData.urgency} 
                     onChange={handleChange}
                     className={
@@ -634,7 +627,6 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     label="Check Date (PDC)" 
                     icon={Calendar}
                     name="check_date" 
-                    disabled={isLiaisonProcessing}
                     value={formData.check_date} 
                     onChange={handleChange} 
                     title="Leave empty for Standard Check"
@@ -652,13 +644,12 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                     <textarea 
                         name="description" 
                         rows="5" 
-                        disabled={isLiaisonProcessing}
                         className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pr-16 transition-all resize-none font-mono leading-relaxed"
                         placeholder="Enter voucher description..."
                         value={formData.description} 
                         onChange={handleChange}
                     ></textarea>
-                    {!isLiaisonProcessing && (
+                    {(
                         <div className="absolute top-2 right-2 flex gap-1 bg-gray-50 p-1 rounded-lg border border-gray-200">
                             <button type="button" onClick={() => insertAtCursor('• ')} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-gray-500 hover:text-blue-600 transition-all" title="Bullet List">
                                 <List size={14} />

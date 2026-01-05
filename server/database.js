@@ -279,4 +279,15 @@ function resetDatabase(callback) {
     });
 }
 
-module.exports = { db, resetDatabase };
+function closeDatabase(callback) {
+    db.close((err) => {
+        if (err) {
+            console.error('Error closing database', err.message);
+        } else {
+            console.log('Database connection closed.');
+        }
+        if (callback) callback(err);
+    });
+}
+
+module.exports = { db, resetDatabase, closeDatabase };

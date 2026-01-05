@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import axios from 'axios';
+import axios from '../api';
 import { 
   LogOut, Plus, Printer, RefreshCw, CheckCircle, Search, Filter, Calendar, X, 
   TrendingUp, Clock, FileCheck, Building, Settings, Edit, CreditCard, AlertTriangle,
@@ -1018,9 +1018,10 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       const companyId = user.company_id || selectedCategoryCompany;
       const res = await axios.get(`http://localhost:5000/api/categories?company_id=${companyId || ''}`);
-      setCategories(res.data);
+      setCategories(res.data || []);
     } catch (err) {
       console.error("Error fetching categories", err);
+      setCategories([]);
     }
   };
 
@@ -1102,12 +1103,16 @@ const Dashboard = ({ user, onLogout }) => {
     setProfileError(null);
     try {
         const res = await axios.get(`http://localhost:5000/api/profile/${user.id}`);
-        setProfileData(res.data);
-        setProfileForm({ 
-            username: res.data.username, 
-            password: '', 
-            full_name: res.data.full_name || '' 
-        });
+        if (res.data) {
+            setProfileData(res.data);
+            setProfileForm({ 
+                username: res.data.username || '', 
+                password: '', 
+                full_name: res.data.full_name || '' 
+            });
+        } else {
+            throw new Error("No profile data received");
+        }
     } catch (err) {
         console.error(err);
         setProfileError("Failed to load profile data.");
@@ -1119,9 +1124,10 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchProfileRequests = async () => {
     try {
         const res = await axios.get('http://localhost:5000/api/profile/requests');
-        setProfileRequests(res.data);
+        setProfileRequests(res.data || []);
     } catch (err) {
         console.error(err);
+        setProfileRequests([]);
     }
   };
 
@@ -1135,9 +1141,10 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchUsers = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/users');
-      setUsers(res.data);
+      setUsers(res.data || []);
     } catch (err) {
       console.error(err);
+      setUsers([]);
     }
   };
 
@@ -1264,18 +1271,20 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchBanks = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/banks?company_id=${user.company_id || ''}`);
-      setBanks(res.data);
+      setBanks(res.data || []);
     } catch (err) {
       console.error("Error fetching banks", err);
+      setBanks([]);
     }
   };
 
   const fetchCompanies = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/companies');
-      setCompanies(res.data);
+      setCompanies(res.data || []);
     } catch (err) {
       console.error("Error fetching companies", err);
+      setCompanies([]);
     }
   };
 
@@ -1455,7 +1464,7 @@ const Dashboard = ({ user, onLogout }) => {
     });
     
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8 animate-fade-in p-4 md:p-0">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Issuances Overview</h2>
@@ -1550,7 +1559,7 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                 </div>
                 <div className="bg-white shadow-sm rounded-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[400px]">
-                    <div className="overflow-auto custom-scrollbar flex-1">
+                    <div className="overflow-x-auto custom-scrollbar flex-1">
                         <table className="min-w-full divide-y divide-gray-200 relative">
                             <thead className="bg-gray-50/50 sticky top-0 z-10 shadow-sm">
                                 <tr>
@@ -1624,7 +1633,7 @@ const Dashboard = ({ user, onLogout }) => {
     const totalUnclaimed = banks.reduce((sum, bank) => sum + parseFloat(bank.unclaimed_balance || 0), 0);
     
     return (
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8 animate-fade-in p-4 md:p-0">
         <div className="flex justify-between items-center">
             <div>
                 <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Bank Accounts</h2>
@@ -1716,14 +1725,14 @@ const Dashboard = ({ user, onLogout }) => {
     const activeSlide = dashboardSlides[recentActivityIndex] || dashboardSlides[0];
 
     return (
-    <div className="space-y-8 animate-fade-in">
-      <div>
+    <div className="flex flex-col gap-6 animate-fade-in p-4 md:p-0 h-auto lg:h-full">
+      <div className="flex-shrink-0">
         <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Dashboard Overview</h2>
         <p className="text-gray-500 mt-1">Welcome back, {user.username}. Here's what's happening today.</p>
       </div>
       
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard 
               title="Total Vouchers" 
               value={stats.total_vouchers} 
@@ -1755,9 +1764,9 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 lg:min-h-0">
         <div 
-            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[500px] relative overflow-hidden"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[500px] lg:h-full relative overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
@@ -1846,7 +1855,7 @@ const Dashboard = ({ user, onLogout }) => {
             )}
         </div>
 
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-2xl shadow-lg text-white relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-2xl shadow-lg text-white relative overflow-hidden h-auto lg:h-full">
             <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-black opacity-10 rounded-full blur-3xl"></div>
             
@@ -1923,7 +1932,7 @@ const Dashboard = ({ user, onLogout }) => {
     }
 
     return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] gap-4 animate-fade-in">
+    <div className="flex flex-col h-auto lg:h-full gap-4 animate-fade-in p-4 md:p-0">
       <div className="flex-none flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
             {selectedCompanyName ? (
@@ -2027,18 +2036,18 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Table */}
       <div className="flex-1 bg-white shadow-sm rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-auto custom-scrollbar relative">
-            <table className="min-w-full divide-y divide-gray-200">
+        <div className="flex-1 overflow-x-auto custom-scrollbar relative">
+            <table className="min-w-full divide-y divide-gray-200 table-fixed">
             <thead className="bg-gray-50/50 sticky top-0 z-30 shadow-sm">
                 <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Voucher No</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1 whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Urgency</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Deadline</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[140px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Voucher No</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[120px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Urgency</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[120px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Deadline</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[120px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Date</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider min-w-[300px] bg-gray-50/95 backdrop-blur-sm">Payee</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Amount</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1 whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Status</th>
-                <th className="px-2 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 z-40 bg-gray-50/95 backdrop-blur-sm shadow-[-5px_0_5px_-5px_rgba(0,0,0,0.1)]">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[150px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Amount</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[140px] whitespace-nowrap bg-gray-50/95 backdrop-blur-sm">Status</th>
+                <th className="px-2 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-[100px] whitespace-nowrap sticky right-0 z-40 bg-gray-50/95 backdrop-blur-sm shadow-[-5px_0_5px_-5px_rgba(0,0,0,0.1)]">Actions</th>
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
@@ -2176,7 +2185,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const renderSettingsView = () => (
-    <div className="space-y-8 max-w-5xl animate-fade-in">
+    <div className="space-y-8 w-full animate-fade-in">
       <div>
         <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Settings</h2>
         <p className="text-gray-500 mt-1">Manage your profile, categories, and system preferences.</p>
@@ -2284,7 +2293,7 @@ const Dashboard = ({ user, onLogout }) => {
       
       {/* Profile Section */}
       {settingsTab === 'profile' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-3xl animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 w-full animate-fade-in">
           {isLoadingProfile ? (
              <div className="flex justify-center items-center py-12">
                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -2316,7 +2325,7 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
               
               {isEditingProfile ? (
-                <form onSubmit={handleProfileUpdate} className="space-y-6">
+                <form onSubmit={handleProfileUpdate} className="space-y-6 w-full">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Full Name (for Vouchers)</label>
                         <input 
@@ -2362,7 +2371,7 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                 </form>
               ) : (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
                         <div className="text-lg font-medium text-gray-900">{profileData.full_name || 'Not set'}</div>
@@ -2371,15 +2380,13 @@ const Dashboard = ({ user, onLogout }) => {
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Username</label>
                         <div className="text-lg font-medium text-gray-900">{profileData.username}</div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Role</label>
-                            <div className="text-lg font-medium text-gray-900 uppercase">{profileData.role}</div>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company</label>
-                            <div className="text-lg font-medium text-gray-900">{user.company_name || 'All Companies'}</div>
-                        </div>
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Role</label>
+                        <div className="text-lg font-medium text-gray-900 uppercase">{profileData.role}</div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company</label>
+                        <div className="text-lg font-medium text-gray-900">{user.company_name || 'All Companies'}</div>
                     </div>
                 </div>
               )}
@@ -2392,192 +2399,216 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Categories Section */}
       {settingsTab === 'categories' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-3xl animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 w-full animate-fade-in">
           <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><FileText size={24} /></div>
             Manage Categories
           </h3>
           
-          {user.role === 'admin' && (
-              <div className="mb-6">
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Select Company to Manage</label>
-                  <div className="relative group">
-                    <select 
-                        value={selectedCategoryCompany} 
-                        onChange={e => setSelectedCategoryCompany(e.target.value)}
-                        className="w-full border border-gray-300 p-3 rounded-xl appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white hover:bg-gray-50 cursor-pointer"
-                    >
-                        <option value="">All Companies (View Only)</option>
-                        {companies.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 group-hover:text-blue-600 transition-colors">
-                        <ChevronDown size={16} strokeWidth={2.5} />
-                    </div>
-                  </div>
-                  {!selectedCategoryCompany && (
-                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                          <AlertTriangle size={12} /> Select a specific company to add new categories.
-                      </p>
-                  )}
-              </div>
-          )}
-
-          <form onSubmit={handleAddCategory} className="flex gap-3 mb-8">
-            <input 
-                type="text" 
-                required
-                value={newCategory}
-                onChange={e => setNewCategory(e.target.value)}
-                className="flex-1 border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-400"
-                placeholder="New Category Name"
-                disabled={user.role === 'admin' && !selectedCategoryCompany}
-            />
-            <button 
-                type="submit" 
-                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:shadow-none"
-                disabled={user.role === 'admin' && !selectedCategoryCompany}
-            >
-                Add Category
-            </button>
-          </form>
-
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <ul className="divide-y divide-gray-200">
-                {categories.map(cat => (
-                    <li key={cat.id} className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-gray-100 p-2 rounded-lg text-gray-500">
-                                <FileText size={16} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+                <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 sticky top-6">
+                    {user.role === 'admin' && (
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Select Company</label>
+                            <div className="relative group">
+                                <select 
+                                    value={selectedCategoryCompany} 
+                                    onChange={e => setSelectedCategoryCompany(e.target.value)}
+                                    className="w-full border border-gray-300 p-3 rounded-xl appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white hover:bg-gray-50 cursor-pointer"
+                                >
+                                    <option value="">All Companies (View Only)</option>
+                                    {companies.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 group-hover:text-blue-600 transition-colors">
+                                    <ChevronDown size={16} strokeWidth={2.5} />
+                                </div>
                             </div>
-                            <div>
-                                <span className="text-gray-900 font-bold block">{cat.name}</span>
-                                {user.role === 'admin' && !selectedCategoryCompany && (
-                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 mt-1 inline-block">
-                                        {cat.company_name}
-                                    </span>
-                                )}
-                            </div>
+                            {!selectedCategoryCompany && (
+                                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                    <AlertTriangle size={12} /> Select a specific company to add new categories.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleAddCategory} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">New Category Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={newCategory}
+                                onChange={e => setNewCategory(e.target.value)}
+                                className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-400"
+                                placeholder="e.g. Office Supplies"
+                                disabled={user.role === 'admin' && !selectedCategoryCompany}
+                            />
                         </div>
                         <button 
-                            onClick={() => handleDeleteCategory(cat)}
-                            className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Category"
+                            type="submit" 
+                            className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:shadow-none"
+                            disabled={user.role === 'admin' && !selectedCategoryCompany}
                         >
-                            <X size={18} />
+                            Add Category
                         </button>
-                    </li>
-                ))}
-                {categories.length === 0 && (
-                    <li className="p-8 text-center text-gray-400 italic">No categories found</li>
-                )}
-            </ul>
+                    </form>
+                </div>
+            </div>
+
+            <div className="lg:col-span-2">
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <ul className="divide-y divide-gray-200">
+                        {(categories || []).map(cat => (
+                            <li key={cat.id} className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-gray-100 p-2 rounded-lg text-gray-500">
+                                        <FileText size={16} />
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-900 font-bold block">{cat.name}</span>
+                                        {user.role === 'admin' && !selectedCategoryCompany && (
+                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 mt-1 inline-block">
+                                                {cat.company_name}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleDeleteCategory(cat)}
+                                    className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete Category"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </li>
+                        ))}
+                        {categories.length === 0 && (
+                            <li className="p-8 text-center text-gray-400 italic">No categories found</li>
+                        )}
+                    </ul>
+                </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Companies Section (Admin) */}
       {settingsTab === 'companies' && user.role === 'admin' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-3xl animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 max-w-full animate-fade-in">
             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Building size={24} /></div>
                 Manage Companies
             </h3>
 
-            <form onSubmit={handleAddCompany} className="space-y-4 mb-8 bg-gray-50 p-6 rounded-xl border border-gray-100">
-                <h4 className="font-bold text-gray-900 mb-4">Add New Company</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company Name</label>
-                        <input 
-                            type="text" 
-                            required
-                            value={newCompanyForm.name}
-                            onChange={e => setNewCompanyForm({...newCompanyForm, name: e.target.value})}
-                            className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="e.g. ACME Corp"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Prefix (Unique)</label>
-                        <input 
-                            type="text" 
-                            required
-                            value={newCompanyForm.prefix}
-                            onChange={e => setNewCompanyForm({...newCompanyForm, prefix: e.target.value.toUpperCase()})}
-                            className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase"
-                            placeholder="e.g. ACME"
-                            maxLength={5}
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Address</label>
-                        <input 
-                            type="text" 
-                            value={newCompanyForm.address}
-                            onChange={e => setNewCompanyForm({...newCompanyForm, address: e.target.value})}
-                            className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Company Address"
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Contact Info</label>
-                        <input 
-                            type="text" 
-                            value={newCompanyForm.contact}
-                            onChange={e => setNewCompanyForm({...newCompanyForm, contact: e.target.value})}
-                            className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Phone or Email"
-                        />
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Form Section - Left Side */}
+                <div className="lg:col-span-1">
+                    <form onSubmit={handleAddCompany} className="space-y-4 bg-gray-50 p-6 rounded-xl border border-gray-100 sticky top-6">
+                        <h4 className="font-bold text-gray-900 mb-4">Add New Company</h4>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company Name</label>
+                                <input 
+                                    type="text" 
+                                    required
+                                    value={newCompanyForm.name}
+                                    onChange={e => setNewCompanyForm({...newCompanyForm, name: e.target.value})}
+                                    className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="e.g. ACME Corp"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Prefix (Unique)</label>
+                                <input 
+                                    type="text" 
+                                    required
+                                    value={newCompanyForm.prefix}
+                                    onChange={e => setNewCompanyForm({...newCompanyForm, prefix: e.target.value.toUpperCase()})}
+                                    className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono uppercase"
+                                    placeholder="e.g. ACME"
+                                    maxLength={5}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Address</label>
+                                <textarea 
+                                    value={newCompanyForm.address}
+                                    onChange={e => setNewCompanyForm({...newCompanyForm, address: e.target.value})}
+                                    className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                                    placeholder="Company Address"
+                                    rows="3"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Contact Info</label>
+                                <input 
+                                    type="text" 
+                                    value={newCompanyForm.contact}
+                                    onChange={e => setNewCompanyForm({...newCompanyForm, contact: e.target.value})}
+                                    className="w-full border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="Phone or Email"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <button 
+                                type="submit" 
+                                className="w-full bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5"
+                            >
+                                Add Company
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <div className="flex justify-end pt-2">
-                    <button 
-                        type="submit" 
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5"
-                    >
-                        Add Company
-                    </button>
-                </div>
-            </form>
 
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Prefix</th>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Address</th>
-                            <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {companies.map(company => (
-                            <tr key={company.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">{company.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap font-mono text-blue-600 font-bold">{company.prefix}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm truncate max-w-xs">{company.address || '-'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <button 
-                                        onClick={() => handleDeleteCompany(company)}
-                                        className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Delete Company"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                {/* List Section - Right Side */}
+                <div className="lg:col-span-2">
+                    <div className="border border-gray-200 rounded-xl overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Prefix</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Address</th>
+                                    <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {(companies || []).map(company => (
+                                    <tr key={company.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">{company.name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap font-mono text-blue-600 font-bold">{company.prefix}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm truncate max-w-xs">{company.address || '-'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <button 
+                                                onClick={() => handleDeleteCompany(company)}
+                                                className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete Company"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {companies.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic">No companies found</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
       )}
 
       {/* Print Settings Section */}
       {settingsTab === 'print' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-full animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 max-w-full animate-fade-in">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                     <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Printer size={24} /></div>
@@ -2768,7 +2799,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Users Section (Admin) */}
       {settingsTab === 'users' && user.role === 'admin' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-5xl animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 w-full animate-fade-in">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                     <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Users size={24} /></div>
@@ -2785,7 +2816,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </button>
             </div>
 
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+            <div className="border border-gray-200 rounded-xl overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -2796,7 +2827,7 @@ const Dashboard = ({ user, onLogout }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map(u => (
+                  {(users || []).map(u => (
                     <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{u.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap capitalize text-gray-600">
@@ -2826,7 +2857,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Database Section (Admin) */}
       {settingsTab === 'database' && user.role === 'admin' && (
-        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-8 max-w-3xl animate-fade-in">
+        <div className="bg-white shadow-sm rounded-2xl border border-gray-100 p-4 md:p-8 w-full animate-fade-in">
             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Database size={24} /></div>
                 Database Management
@@ -2859,7 +2890,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <h3 className="text-lg font-bold text-gray-900">Pending Profile Updates</h3>
               </div>
               <ul className="divide-y divide-gray-100">
-                  {profileRequests.map(req => (
+                  {(profileRequests || []).map(req => (
                       <li key={req.id} className="p-6 hover:bg-blue-50/30 transition-colors">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                               <div>
@@ -3220,7 +3251,7 @@ const Dashboard = ({ user, onLogout }) => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
-          <div className="max-w-[98%] mx-auto">
+          <div className={`max-w-[98%] mx-auto ${['dashboard', 'issuances'].includes(activeView) || activeView.startsWith('bank-') ? 'h-auto lg:h-full' : ''}`}>
             {activeView === 'dashboard' && renderDashboardView()}
             {activeView === 'issuances' && renderIssuancesView()}
             {activeView === 'settings' && renderSettingsView()}

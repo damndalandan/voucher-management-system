@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api';
 import { Trash2, UserPlus, Save, Download, RefreshCw, AlertTriangle, Printer, Layout, Database, Users, Edit, Building, Check, X, Eye, ChevronDown } from 'lucide-react';
 import { VoucherCopy } from './VoucherTemplate';
 

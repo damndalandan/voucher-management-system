@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios from '../api';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, User, Lock, ArrowRight } from 'lucide-react';
 
@@ -15,9 +15,15 @@ const Login = ({ onLogin }) => {
     setError('');
     try {
       const res = await axios.post('http://localhost:5000/api/login', { username, password });
+      
+      // Handle new response structure with token
+      const { token, user } = res.data;
+      // If backend returns flat object (legacy) or nested (new)
+      const userData = token ? { ...user, token } : res.data;
+
       // Add a small delay for effect
       setTimeout(() => {
-          onLogin(res.data);
+          onLogin(userData);
       }, 500);
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');

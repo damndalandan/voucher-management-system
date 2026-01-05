@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api';
 import { 
   X, Calendar, User, FileText, DollarSign, CreditCard, 
   Building, AlertTriangle, Clock, CheckCircle, ChevronDown,
@@ -316,7 +316,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
                         <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-200 mb-3">
                             <div>
-                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Date</span>
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Issued Date</span>
                                 <div className="font-medium text-xs text-gray-900">{formData.date}</div>
                             </div>
                             <div>
@@ -505,7 +505,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
               <div className={`col-span-12 ${canSelectCompany ? 'md:col-span-4' : 'md:col-span-6'}`}>
                 <CustomInput 
                     type="date" 
-                    label="Date" 
+                    label="Issued Date" 
                     icon={Calendar}
                     name="date" 
                     required 

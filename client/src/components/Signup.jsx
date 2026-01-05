@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, User, Lock, ArrowRight, Building } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const Signup = () => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/companies');
+      const res = await axios.get('http://localhost:5000/api/public/companies');
       setCompanies(res.data);
     } catch (err) {
       console.error("Failed to fetch companies", err);
@@ -34,7 +34,7 @@ const Signup = () => {
     setSuccess('');
 
     try {
-      await axios.post('http://localhost:5000/api/users', {
+      await axios.post('http://localhost:5000/api/signup', {
         username,
         password,
         role,

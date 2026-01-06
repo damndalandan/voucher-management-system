@@ -3,11 +3,24 @@ const router = express.Router();
 const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { put } = require('@vercel/blob');
+const bcrypt = require('bcryptjs'); // Moved to top
+
+// Helper to handle file upload (Disk or Blob)
+async function handleFileUpload(file) {
+    if (!file) return null;
+    if (file.path) return file.path; // Disk storage already saved it
+    if (file.buffer) {
+        // Blob storage
+        const blob = await put(file.originalname, file.buffer, { access: 'public' });
+        return blob.url;
+    }
+    return null;
+}
 
 // Get Current User Profile
 router.get('/profile/:id', authenticateToken, (req, res) => {
     // Users can only see their own profile unless admin?
-    // For now, let's allow if ID matches token or if admin
     if (req.user.id != req.params.id && req.user.role !== 'admin') {
         return res.status(403).json({ error: "Access denied" });
     }
@@ -19,9 +32,36 @@ router.get('/profile/:id', authenticateToken, (req, res) => {
 });
 
 // Request Profile Update
-router.post('/profile/request', authenticateToken, upload.single('signature'), (req, res) => {
+router.post('/profile/request', authenticateToken, upload.single('signature'), async (req, res) => {
     const { user_id, new_username, new_password, new_full_name } = req.body;
-    const new_signature_path = req.file ? `/uploads/${req.file.filename}` : null;
+    let new_signature_path = null;
+    
+    try {
+        new_signature_path = await handleFileUpload(req.file);
+    } catch (e) {
+        console.error("Upload error", e);
+        // Continue without signature or error? Let's continue but maybe warn?
+    }
+    
+    // Fallback for disk storage formatting if handleFileUpload returns a local path
+    // Wait, handleFileUpload returns either full absolute path (maybe?) or relative?
+    // Multer diskStorage usually sets 'path' as absolute or relative depending on config.
+    // In our upload.js we set destination. Multre sets 'path' to full path.
+    // The previous code did `/uploads/${req.file.filename}`.
+    // Memory storage returns URL.
+    // If disk storage, req.file.path is usually prompt.
+    // But we want a web-accessible URL.
+    // If disk storage, we probably need `/uploads/filename`.
+    
+    if (new_signature_path && !new_signature_path.startsWith('http')) {
+        // It's a local path from disk storage?
+        // Actually handleFileUpload returns req.file.path.
+        // If we are on disk storage, we want to store the relative URL '/uploads/...'
+        if (req.file.destination) {
+             // It is disk storage
+             new_signature_path = `/uploads/${req.file.filename}`;
+        }
+    }
     
     if (req.user.id != user_id) return res.status(403).json({ error: "Access denied" });
 
@@ -78,15 +118,6 @@ router.post('/profile/requests/:id/:action', authenticateToken, (req, res) => {
             
             if (reqData.new_username) { updates.push("username = ?"); params.push(reqData.new_username); }
             if (reqData.new_password) { 
-                // Password should be hashed here if it wasn't already?
-                // The request stores plain text password? That's bad.
-                // Ideally, the request should store hashed password, or we hash it now.
-                // Let's assume we hash it now.
-                const bcrypt = require('bcryptjs');
-                // We need to be in an async function to use await, or use sync hash
-                // Since we are in callback, let's use sync or promise chain.
-                // But wait, db.get callback is not async.
-                // Let's use bcrypt.hashSync for simplicity here or refactor.
                 const hashedPassword = bcrypt.hashSync(reqData.new_password, 10);
                 updates.push("password = ?"); 
                 params.push(hashedPassword); 

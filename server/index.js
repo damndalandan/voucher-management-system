@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -17,12 +18,18 @@ const profileRoutes = require('./routes/profile');
 const categoryRoutes = require('./routes/categories');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
+let uploadDir;
+if (process.env.VERCEL) {
+    uploadDir = path.join('/tmp', 'uploads');
+} else {
+    uploadDir = path.join(__dirname, 'uploads');
+}
+
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 app.use(cors());
@@ -41,16 +48,37 @@ app.use('/api', categoryRoutes);
 
 // Database Management Routes
 app.get('/api/backup', (req, res) => {
+    if (process.env.DATABASE_URL) {
+         return res.status(501).json({ error: "Backup not supported for PostgreSQL via API. Use PG tools." });
+    }
     const dbPath = path.resolve(__dirname, 'vouchers.db');
-    res.download(dbPath, 'vouchers_backup.db');
+    if (fs.existsSync(dbPath)) {
+        res.download(dbPath, 'vouchers_backup.db');
+    } else {
+        res.status(404).json({ error: "Database file not found" });
+    }
 });
 
 app.post('/api/restore', upload.single('database'), (req, res) => {
+    if (process.env.DATABASE_URL) {
+         return res.status(501).json({ error: "Restore not supported for PostgreSQL via API. Use PG tools." });
+    }
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const restorePath = path.resolve(__dirname, 'restore_pending.db');
+    // If memory storage (Blob token present but falling back to SQLite?), this breaks.
+    // Logic: If on Vercel without PG, we use /tmp.
+    // If DATABASE_URL is set, we don't reach here.
+    // If LOCAL without BLOB token, we strictly use disk storage (see upload.js).
+    // So req.file.path should exist.
+    
+    // Safety check
+    if (!req.file.path) {
+         return res.status(400).json({ error: "File path missing (Upload config error)" });
+    }
+
     const uploadedPath = req.file.path;
 
     try {
@@ -83,17 +111,21 @@ app.post('/api/reset', (req, res) => {
     resetDatabase((err) => {
         if (err) return res.status(500).json({ error: err.message });
         
-        // Clear uploads folder
-        fs.readdir(uploadDir, (err, files) => {
-            if (err) console.error('Error reading uploads dir:', err);
-            else {
-                for (const file of files) {
-                    fs.unlink(path.join(uploadDir, file), err => {
-                        if (err) console.error('Error deleting ' + file + ':', err);
-                    });
+        // Clear uploads folder? Only if local.
+        // If Blob, we can't easily clear all blobs without API listing.
+        // For now, we just clear local folder.
+        if (!process.env.BLOB_READ_WRITE_TOKEN) {
+            fs.readdir(uploadDir, (err, files) => {
+                if (err) console.error('Error reading uploads dir:', err);
+                else {
+                    for (const file of files) {
+                        fs.unlink(path.join(uploadDir, file), err => {
+                            if (err) console.error('Error deleting ' + file + ':', err);
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
 
         res.json({ message: 'System reset successfully. All data has been cleared and default data restored.' });
     });
@@ -102,6 +134,11 @@ app.post('/api/reset', (req, res) => {
 // Run Sync on Start
 setTimeout(syncData, 5000);
 
-app.listen(PORT, () => {
-    console.log('Server running on http://localhost:' + PORT);
-});
+// Export for Vercel
+module.exports = app;
+
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log('Server running on http://localhost:' + PORT);
+    });
+}

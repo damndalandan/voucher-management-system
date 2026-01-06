@@ -4,13 +4,22 @@ const bcrypt = require('bcryptjs');
 const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { put } = require('@vercel/blob');
+
+// Helper to handle file upload (Disk or Blob)
+async function handleFileUpload(file) {
+    if (!file) return null;
+    if (file.path) return file.path; // Disk storage already saved it
+    if (file.buffer) {
+        // Blob storage
+        const blob = await put(file.originalname, file.buffer, { access: 'public' });
+        return blob.url;
+    }
+    return null;
+}
 
 // Get Users
 router.get('/', authenticateToken, (req, res) => {
-    // Only admin can see all users? Or maybe staff needs to see some info?
-    // For now, let's allow authenticated users to see list, but maybe filter sensitive info if needed.
-    // Original code allowed public access, so this is already an improvement.
-    
     db.all("SELECT u.id, u.username, u.role, u.company_id, u.full_name, u.signature_path, c.name as company_name FROM users u LEFT JOIN companies c ON u.company_id = c.id", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
@@ -63,8 +72,17 @@ router.put('/:id', authenticateToken, upload.single('signature'), async (req, re
 
     const { id } = req.params;
     const { username, password, role, company_id, full_name } = req.body;
-    const signature_path = req.file ? `/uploads/${req.file.filename}` : null;
     
+    let signature_path = null;
+    try {
+        signature_path = await handleFileUpload(req.file);
+        if (signature_path && !signature_path.startsWith('http') && req.file && req.file.destination) {
+             signature_path = `/uploads/${req.file.filename}`;
+        }
+    } catch (e) {
+        console.error("Upload error", e);
+    }
+
     let sql = "UPDATE users SET ";
     const params = [];
     const updates = [];

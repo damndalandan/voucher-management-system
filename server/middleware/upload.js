@@ -2,19 +2,34 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir);
+let storage;
+
+// Use memory storage for Vercel/Cloud to allow uploading to Blob Storage later
+// Use disk storage for local development unless BLOB token is present (shim)
+if (process.env.VERCEL || process.env.BLOB_READ_WRITE_TOKEN) {
+    storage = multer.memoryStorage();
+} else {
+    storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            let uploadDir;
+            // Fallback for non-Vercel environment logic just in case
+            if (process.env.VERCEL) {
+                uploadDir = path.join('/tmp', 'uploads');
+            } else {
+                uploadDir = path.join(__dirname, '../uploads');
+            }
+            
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, uniqueSuffix + path.extname(file.originalname));
         }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+    });
+}
 
 const upload = multer({ storage: storage });
 

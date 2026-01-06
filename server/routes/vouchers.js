@@ -3,33 +3,44 @@ const router = express.Router();
 const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { put } = require('@vercel/blob');
+
+// Helper to handle file upload (Disk or Blob)
+async function handleFileUpload(file) {
+    if (!file) return null;
+    if (file.path) return file.path; // Disk storage already saved it
+    if (file.buffer) {
+        // Blob storage
+        const blob = await put(file.originalname, file.buffer, { access: 'public' });
+        return blob.url;
+    }
+    return null;
+}
 
 // Force Delete Voucher (Admin Only)
 router.delete('/vouchers/:id', authenticateToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Only admin can force delete vouchers" });
     const { id } = req.params;
     
-    db.serialize(() => {
-        db.run("DELETE FROM voucher_attachments WHERE voucher_id = ?", [id]);
-        // Also delete physical files? Skipping for now to avoid complexity, or just delete records.
-        // It's 'force delete transaction', database cleanup is priority.
-
-        db.run("DELETE FROM voucher_history WHERE voucher_id = ?", [id]);
+    // Explicit nesting to ensure sequential execution on Postgres/Pool
+    db.run("DELETE FROM voucher_attachments WHERE voucher_id = ?", [id], (err) => {
+        if (err) console.warn("Error deleting attachments record:", err.message);
         
-        // Remove from checks table to free up check number
-        db.run("DELETE FROM checks WHERE voucher_id = ?", [id]);
+        db.run("DELETE FROM voucher_history WHERE voucher_id = ?", [id], (err) => {
+            if (err) console.warn("Error deleting history:", err.message);
 
-        // Remove from bank transactions (if any) to fix balances theoretically? 
-        // If we want a clean 'undo', we should revert balance impacts. 
-        // But 'Force Delete' is brute force. Let's assume removing transaction record is enough, 
-        // validation logic might recalc balance or user corrects it manually via DB management if needed.
-        // However, checks table is linked to 'checks' table. 
-        // bank_transactions table links check_no or voucher_id?
-        db.run("DELETE FROM bank_transactions WHERE voucher_id = ?", [id]);
+            db.run("DELETE FROM checks WHERE voucher_id = ?", [id], (err) => {
+                 if (err) console.warn("Error deleting checks:", err.message);
 
-        db.run("DELETE FROM vouchers WHERE id = ?", [id], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: "Voucher force deleted successfully" });
+                 db.run("DELETE FROM bank_transactions WHERE voucher_id = ?", [id], (err) => {
+                    if (err) console.warn("Error deleting transactions:", err.message);
+
+                    db.run("DELETE FROM vouchers WHERE id = ?", [id], function(err) {
+                        if (err) return res.status(500).json({ error: err.message });
+                        res.json({ message: "Voucher force deleted successfully" });
+                    });
+                 });
+            });
         });
     });
 });
@@ -64,6 +75,15 @@ router.get('/vouchers/urgent', authenticateToken, (req, res) => {
     }
 
     sql += " GROUP BY v.id";
+
+    // Note: STRING_AGG in Postgres vs GROUP_CONCAT in SQLite. 
+    // This query uses GROUP_CONCAT which works in SQLite. 
+    // For Postgres compatibility, one might need STRING_AGG(va.file_path, '||').
+    // Since we want full compatibility, we check environment in simple way or catch errors?
+    // Doing a replace in code is better.
+    if (process.env.DATABASE_URL) {
+         sql = sql.replace(/GROUP_CONCAT\(([^,]+), '\|\|'\)/g, "STRING_AGG($1, '||')");
+    }
 
     if (sort === 'urgency') {
         sql += ` ORDER BY 
@@ -101,6 +121,10 @@ router.get('/vouchers', authenticateToken, (req, res) => {
                LEFT JOIN users u ON v.created_by = u.id
                LEFT JOIN voucher_attachments va ON v.id = va.voucher_id`;
     
+    if (process.env.DATABASE_URL) {
+         sql = sql.replace(/GROUP_CONCAT\(([^,]+), '\|\|'\)/g, "STRING_AGG($1, '||')");
+    }
+
     const params = [];
     const conditions = [];
 
@@ -114,10 +138,6 @@ router.get('/vouchers', authenticateToken, (req, res) => {
             conditions.push(`v.company_id = ?`);
             params.push(company_id);
         }
-    }
-
-    if (role === 'admin') {
-        // conditions.push(`v.status != 'Pending Liaison'`); // Allow Admin to see detailed status of all vouchers
     }
 
     if (category && category !== 'all') {
@@ -136,10 +156,19 @@ router.get('/vouchers', authenticateToken, (req, res) => {
             conditions.push(`v.date = ?`);
             params.push(filter_value);
         } else if (filter_type === 'month') {
-            conditions.push(`strftime('%Y-%m', v.date) = ?`);
+            // Postgres uses to_char, SQLite strftime
+            if (process.env.DATABASE_URL) {
+                 conditions.push(`to_char(v.date::date, 'YYYY-MM') = ?`);
+            } else {
+                 conditions.push(`strftime('%Y-%m', v.date) = ?`);
+            }
             params.push(filter_value);
         } else if (filter_type === 'year') {
-            conditions.push(`strftime('%Y', v.date) = ?`);
+             if (process.env.DATABASE_URL) {
+                 conditions.push(`to_char(v.date::date, 'YYYY') = ?`);
+            } else {
+                 conditions.push(`strftime('%Y', v.date) = ?`);
+            }
             params.push(filter_value);
         } else if (filter_type === 'week') {
             const [yearStr, weekStr] = filter_value.split('-W');
@@ -168,7 +197,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
         sql += ` WHERE ` + conditions.join(' AND ');
     }
 
-    sql += ` GROUP BY v.id ORDER BY v.created_at DESC`;
+    sql += ` GROUP BY v.id, c.name, u.username, u.full_name ORDER BY v.created_at DESC`; // Added group by fields for Postgres strictness
 
     db.all(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -177,8 +206,8 @@ router.get('/vouchers', authenticateToken, (req, res) => {
 });
 
 // Create Voucher
-router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (req, res) => {
-    const { company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, urgency, deadline_date, is_pdc, check_date } = req.body;
+router.post('/vouchers', authenticateToken, upload.array('attachments', 50), async (req, res) => {
+    const { company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, urgency, deadline_date, is_pdc, check_date, check_issued_date } = req.body;
     const { role, id: created_by } = req.user;
     
     if (!company_id) return res.status(400).json({ error: "Company ID is required" });
@@ -187,54 +216,57 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
     if (role === 'staff' || role === 'hr') {
         status = 'Pending Liaison';
     } else if (role === 'liaison') {
-        // Both Check and Encashment go to Admin for approval if configured, 
-        // or stay Issued if Liaison has power. Based on previous logic:
         status = (payment_type === 'Check' || payment_type === 'Encashment') ? 'Pending Admin' : 'Issued';
     } else if (role === 'admin') {
         status = 'Issued';
     }
 
-    db.get("SELECT prefix FROM companies WHERE id = ?", [company_id], (err, company) => {
+    db.get("SELECT prefix FROM companies WHERE id = ?", [company_id], async (err, company) => {
         if (err || !company) return res.status(500).json({ error: "Company not found" });
 
         const prefix = company.prefix;
 
-        db.get("SELECT count(*) as count FROM vouchers WHERE company_id = ?", [company_id], (err, row) => {
+        db.get("SELECT count(*) as count FROM vouchers WHERE company_id = ?", [company_id], async (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
             
-            const nextNum = row.count + 1;
+            const nextNum = (row.count || 0) + 1;
             const sequence = String(nextNum).padStart(5, '0');
             const voucher_no = `${prefix}-${sequence}`;
 
-            const insertVoucher = () => {
-                const sql = `INSERT INTO vouchers (voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency, deadline_date, is_pdc, check_date) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            const insertVoucher = async () => {
+                const sql = `INSERT INTO vouchers (voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency, deadline_date, is_pdc, check_date, check_issued_date) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
                 
-                const params = [voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency || 'Normal', deadline_date, (is_pdc === 'true' || is_pdc === '1' || is_pdc === 1) ? 1 : 0, check_date];
+                const params = [voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency || 'Normal', deadline_date, (is_pdc === 'true' || is_pdc === '1' || is_pdc === 1) ? 1 : 0, check_date, check_issued_date];
 
-                db.run(sql, params, function(err) {
+                db.run(sql, params, async function(err) {
                     if (err) return res.status(500).json({ error: err.message });
                     
                     const voucherId = this.lastID;
 
                     if (req.files && req.files.length > 0) {
-                        const attachmentStmt = db.prepare("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)");
-                        req.files.forEach(file => {
-                            attachmentStmt.run(voucherId, `/uploads/${file.filename}`, file.originalname);
-                        });
-                        attachmentStmt.finalize();
+                        try {
+                            for (const file of req.files) {
+                                const url = await handleFileUpload(file);
+                                if (url) {
+                                    db.run("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)",
+                                        [voucherId, url, file.originalname]);
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Upload error", e);
+                        }
                     }
 
                     db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
                         [voucherId, created_by, 'Created', 'Voucher created']);
 
-                    // Unified logic for Checks AND Encashment
                     if (status === 'Issued' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                             if (!err && account) {
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
-                                        [account.id, voucherId, check_no, check_date || null, new Date().toISOString(), payee, description, amount],
+                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount],
                                         (err) => {
                                             if (err) console.error("Error inserting check:", err.message);
                                             db.run(`UPDATE checkbooks 
@@ -251,7 +283,7 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                             if (!err && account) {
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-                                        [account.id, voucherId, check_no, check_date || null, new Date().toISOString(), payee, description, amount],
+                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount],
                                         (err) => {
                                             if (err) console.error("Error inserting pending check:", err.message);
                                             db.run(`UPDATE checkbooks 
@@ -264,12 +296,6 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                             }
                         });
                     }
-                    // REMOVED explicit Encashment-direct-withdrawal logic to ensure it goes through Check flow
-                    /*
-                    else if (status === 'Issued' && payment_type === 'Encashment' && bank_name) {
-                       ...
-                    }
-                    */
 
                     res.json({ 
                         id: voucherId, 
@@ -301,10 +327,9 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
 router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_attachment'), (req, res) => {
     const { id } = req.params;
     let { status } = req.body;
-    const { void_reason, certified_by, approved_by, received_by, check_no, bank_name, check_date } = req.body;
+    const { void_reason, certified_by, approved_by, received_by, check_no, bank_name, check_date, check_issued_date } = req.body;
     const { role, id: user_id, full_name, username } = req.user;
 
-    // Enforce Approval Workflow for Liaison: Downgrade 'Issued' to 'Pending Admin' if no attachment (standard flow)
     if (role === 'liaison' && status === 'Issued' && !req.file) {
         status = 'Pending Admin';
     }
@@ -317,7 +342,6 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
         const effectiveBankName = bank_name || currentVoucher.bank_name;
         const isCheckOrEncashment = currentVoucher.payment_type === 'Check' || currentVoucher.payment_type === 'Encashment';
 
-        // Pre-check for duplicates if issuing
         if (status === 'Issued' && currentVoucher.status !== 'Issued' && isCheckOrEncashment && effectiveCheckNo && effectiveBankName) {
              db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [effectiveBankName], (err, account) => {
                  if (err || !account) return res.status(400).json({ error: "Bank account not found" });
@@ -326,28 +350,27 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
                      if (existingCheck && existingCheck.voucher_id != id) {
                          return res.status(400).json({ error: `Check number ${effectiveCheckNo} is already used.` });
                      }
-                     performUpdate();
+                     performUpdate(req.file);
                  });
              });
         } else {
-            performUpdate();
+            performUpdate(req.file);
         }
 
-        function performUpdate() {
+        async function performUpdate(approvalFile) {
             const updates = ["status = ?"];
             const params = [status];
             
             if (check_no) { updates.push("check_no = ?"); params.push(check_no); }
             if (bank_name) { updates.push("bank_name = ?"); params.push(bank_name); }
             if (check_date) { updates.push("check_date = ?"); params.push(check_date); }
+            if (check_issued_date) { updates.push("check_issued_date = ?"); params.push(check_issued_date); }
 
             if (void_reason) {
                 updates.push("void_reason = ?");
                 params.push(void_reason);
             }
 
-            // Handle Workflow Names
-            // Helper to get name
             const performerName = full_name || username || 'Unknown';
 
             if (status === 'Pending Admin' && role === 'liaison') {
@@ -356,22 +379,23 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
             }
 
             if (status === 'Issued') {
-                // If it was the admin approving
                 if (role === 'admin') {
                      updates.push("approved_by = ?");
                      params.push(approved_by || performerName);
-                } 
-                // If liaison is issuing (Implicit Approval or Offline Approval)
-                else if (role === 'liaison') {
+                } else if (role === 'liaison') {
                     updates.push("approved_by = ?");
-                    // If offline approved, maybe use 'Offline Approval' or keep user name. 
-                    // Let's use user name but append (Offline) if file exists? 
-                    // Or just use user name.
                     params.push(approved_by || performerName);
                     
-                    if (req.file) {
-                        updates.push("approval_attachment = ?");
-                        params.push(req.file.path);
+                    if (approvalFile) {
+                        try {
+                            const url = await handleFileUpload(approvalFile);
+                            if (url) {
+                                updates.push("approval_attachment = ?");
+                                params.push(url);
+                            }
+                        } catch (e) {
+                            console.error("Upload error", e);
+                        }
                     }
                 }
             }
@@ -388,14 +412,12 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
             db.run(`UPDATE vouchers SET ${updates.join(', ')} WHERE id = ?`, params, function(err) {
                 if (err) return res.status(500).json({ error: err.message });
 
-                // Log History
                 let actionDetail = `Status changed to ${status}`;
-                if (req.file) actionDetail += " (with approval attachment)";
+                if (approvalFile) actionDetail += " (with approval attachment)";
                 
                 db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
                     [id, user_id, 'Status Update', actionDetail]);
 
-                // Handle Side Effects
                 if (status === 'Issued' && currentVoucher.status !== 'Issued') {
                     if ((currentVoucher.payment_type === 'Check' || currentVoucher.payment_type === 'Encashment') && currentVoucher.check_no && currentVoucher.bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
@@ -404,7 +426,7 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
                                     if (!existingCheck) {
                                         db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
                                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
-                                                [account.id, id, currentVoucher.check_no, currentVoucher.check_date, new Date().toISOString(), currentVoucher.payee, currentVoucher.description, currentVoucher.amount],
+                                                [account.id, id, currentVoucher.check_no, currentVoucher.check_date, check_issued_date || currentVoucher.check_issued_date || new Date().toISOString(), currentVoucher.payee, currentVoucher.description, currentVoucher.amount],
                                                 (err) => {
                                                     if (!err) {
                                                         db.run(`UPDATE checkbooks 
@@ -421,20 +443,7 @@ router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_at
                                 });
                             }
                         });
-                    } 
-                    // REMOVED deprecated direct deduction for encashment 
-                    /*
-                    else if (currentVoucher.payment_type === 'Encashment' && currentVoucher.bank_name) {
-                        db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
-                            if (!err && account) {
-                                const newBalance = account.current_balance - currentVoucher.amount;
-                                db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, account.id]);
-                                db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, running_balance) VALUES (?, ?, 'Withdrawal', ?, ?, ?, ?)",
-                                    [account.id, id, currentVoucher.category || 'Encashment', currentVoucher.amount, `Encashment: ${currentVoucher.payee}`, newBalance]);
-                            }
-                        });
                     }
-                    */
                 } else if (status === 'Voided' && currentVoucher.status !== 'Voided') {
                     db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
                         if (!err && check) {
@@ -473,11 +482,11 @@ router.get('/vouchers/:id/history', authenticateToken, (req, res) => {
 });
 
 // Update Voucher
-router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), (req, res) => {
+router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), async (req, res) => {
     const { id } = req.params;
     let { status } = req.body;
     const { 
-        check_no, bank_name, payment_type, check_date, category, 
+        check_no, bank_name, payment_type, check_date, check_issued_date, category, 
         urgency, deadline_date, is_pdc, void_reason,
         date, payee, description, amount, amount_in_words,
         removed_attachments
@@ -486,13 +495,9 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
     const { role, id: user_id } = req.user;
 
     db.get("SELECT * FROM vouchers WHERE id = ?", [id], (err, currentVoucher) => {
-        if (err) {
-            console.error("Error fetching voucher:", err);
-            return res.status(500).json({ error: "Database error fetching voucher: " + err.message });
-        }
+        if (err) return res.status(500).json({ error: "Database error fetching voucher: " + err.message });
         if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
 
-        // Enforce Approval Workflow for Liaison: Prevent setting to 'Issued' directly via Edit
         if (role === 'liaison' && status === 'Issued' && currentVoucher.status !== 'Issued') {
              status = 'Pending Admin';
         }
@@ -501,8 +506,6 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
             if (check_no && check_no !== currentVoucher.check_no) return res.status(403).json({ error: "Staff cannot edit check number" });
             if (bank_name && bank_name !== currentVoucher.bank_name) return res.status(403).json({ error: "Staff cannot edit bank name" });
         } else if (role === 'liaison') {
-            // Liaison can edit check details, but check_no is restricted if status is 'Issued' (Admin Approved)
-            // UNLESS they are just updating the check_date (PDC date)
             if (currentVoucher.status === 'Issued' && check_no && check_no !== currentVoucher.check_no) {
                  return res.status(403).json({ error: "Cannot edit check number after Admin approval" });
             }
@@ -530,6 +533,7 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
         addUpdate('deadline_date', deadline_date, currentVoucher.deadline_date);
         addUpdate('is_pdc', is_pdc ? 1 : 0, currentVoucher.is_pdc);
         addUpdate('check_date', check_date, currentVoucher.check_date);
+        addUpdate('check_issued_date', check_issued_date, currentVoucher.check_issued_date);
         addUpdate('void_reason', void_reason, currentVoucher.void_reason);
         
         addUpdate('date', date, currentVoucher.date);
@@ -538,189 +542,169 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
         addUpdate('amount', amount, currentVoucher.amount);
         addUpdate('amount_in_words', amount_in_words, currentVoucher.amount_in_words);
 
-        if (removed_attachments) {
-            try {
-                const idsToRemove = JSON.parse(removed_attachments);
-                if (Array.isArray(idsToRemove) && idsToRemove.length > 0) {
-                    const placeholders = idsToRemove.map(() => '?').join(',');
-                    db.run(`DELETE FROM voucher_attachments WHERE id IN (${placeholders})`, idsToRemove);
-                    changes.push(`Removed ${idsToRemove.length} attachment(s)`);
-                }
-            } catch (e) {
-                console.error("Error parsing removed_attachments", e);
-            }
-        }
+        // Async changes handling (attachments)
+        processUpdates();
 
-        if (req.files && req.files.length > 0) {
-            const attachmentStmt = db.prepare("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)");
-            req.files.forEach(file => {
-                attachmentStmt.run(id, `/uploads/${file.filename}`, file.originalname);
-            });
-            attachmentStmt.finalize();
-            changes.push(`Added ${req.files.length} attachment(s)`);
-        }
-
-        const executeUpdate = () => {
-            if (updates.length === 0 && changes.length === 0) {
-                return res.json({ message: "No changes detected" });
-            }
-
-            if (updates.length > 0) {
-                sql += updates.join(", ") + " WHERE id = ?";
-                params.push(id);
-                
-                db.run(sql, params, function(err) {
-                    if (err) {
-                        console.error("Error updating voucher:", err);
-                        return res.status(500).json({ error: "Error updating voucher: " + err.message });
+        async function processUpdates() {
+            if (removed_attachments) {
+                try {
+                    const idsToRemove = JSON.parse(removed_attachments);
+                    if (Array.isArray(idsToRemove) && idsToRemove.length > 0) {
+                        const placeholders = idsToRemove.map(() => '?').join(',');
+                        db.run(`DELETE FROM voucher_attachments WHERE id IN (${placeholders})`, idsToRemove);
+                        changes.push(`Removed ${idsToRemove.length} attachment(s)`);
                     }
+                } catch (e) {
+                    console.error("Error parsing removed_attachments", e);
+                }
+            }
+
+            if (req.files && req.files.length > 0) {
+                try {
+                    for (const file of req.files) {
+                        const url = await handleFileUpload(file);
+                        if (url) {
+                            db.run("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)", 
+                             [id, url, file.originalname]);
+                        }
+                    }
+                    changes.push(`Added ${req.files.length} attachment(s)`);
+                } catch (e) {
+                     console.error("Error uploading attachments", e);
+                }
+            }
+
+            const executeUpdate = () => {
+                if (updates.length === 0 && changes.length === 0) {
+                    return res.json({ message: "No changes detected" });
+                }
+
+                if (updates.length > 0) {
+                    sql += updates.join(", ") + " WHERE id = ?";
+                    params.push(id);
                     
+                    db.run(sql, params, function(err) {
+                        if (err) return res.status(500).json({ error: "Error updating voucher: " + err.message });
+                        
+                        if (changes.length > 0) {
+                            db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
+                                [id, user_id || null, 'Updated', changes.join(', ')]);
+                        }
+                        
+                        res.json({ message: "Voucher updated successfully" });
+                    });
+                } else {
                     if (changes.length > 0) {
-                        db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
-                            [id, user_id || null, 'Updated', changes.join(', ')]);
+                            db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
+                                [id, user_id || null, 'Updated', changes.join(', ')]);
                     }
-                    
                     res.json({ message: "Voucher updated successfully" });
-                });
-            } else {
-                 if (changes.length > 0) {
-                        db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
-                            [id, user_id || null, 'Updated', changes.join(', ')]);
                 }
-                res.json({ message: "Voucher updated successfully" });
-            }
-        };
+            };
 
-        if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
-            db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
-                if (err) {
-                    console.error("Error fetching bank account:", err);
-                    return res.status(500).json({ error: "Database error fetching bank account: " + err.message });
-                }
-                if (!account) return res.status(404).json({ error: `Bank account '${bank_name}' not found` });
+            if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
+                db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
+                    if (err) return res.status(500).json({ error: "Database error fetching bank account: " + err.message });
+                    if (!account) return res.status(404).json({ error: `Bank account '${bank_name}' not found` });
 
-                db.get("SELECT id, status FROM checks WHERE voucher_id = ?", [id], (err, existingCheck) => {
-                    if (err) {
-                        console.error("Error checking existing check:", err);
-                        return res.status(500).json({ error: "Database error checking existing check: " + err.message });
-                    }
+                    db.get("SELECT id, status FROM checks WHERE voucher_id = ?", [id], (err, existingCheck) => {
+                        if (err) return res.status(500).json({ error: "Database error checking existing check: " + err.message });
 
-                    if (!existingCheck) {
-                         const checkStatus = status === 'Issued' ? 'Issued' : 'Pending';
-                         db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                [account.id, id, check_no, check_date || null, new Date().toISOString(), payee || currentVoucher.payee, description || currentVoucher.description, amount || currentVoucher.amount, checkStatus],
-                                function(err) {
-                                    if (err) {
-                                        console.error("Error inserting check:", err);
-                                        if (err.message.includes('UNIQUE constraint failed')) {
-                                            return res.status(400).json({ error: `Check number ${check_no} is already used for this bank.` });
+                        if (!existingCheck) {
+                            const checkStatus = status === 'Issued' ? 'Issued' : 'Pending';
+                            db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    [account.id, id, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee || currentVoucher.payee, description || currentVoucher.description, amount || currentVoucher.amount, checkStatus],
+                                    function(err) {
+                                        if (err) {
+                                            if (err.message.includes('UNIQUE constraint failed')) {
+                                                return res.status(400).json({ error: `Check number ${check_no} is already used for this bank.` });
+                                            }
+                                            return res.status(500).json({ error: "Error inserting check: " + err.message });
                                         }
-                                        return res.status(500).json({ error: "Error inserting check: " + err.message });
-                                    }
-                                    
-                                    db.run(`UPDATE checkbooks 
-                                            SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
-                                            WHERE bank_account_id = ? 
-                                            AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
-                                            AND status = 'Active'`, 
-                                            [check_no, check_no, account.id, check_no], (err) => {
-                                                if (err) console.error("Error updating checkbook:", err);
-                                            });
+                                        
+                                        db.run(`UPDATE checkbooks 
+                                                SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
+                                                WHERE bank_account_id = ? 
+                                                AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
+                                                AND status = 'Active'`, 
+                                                [check_no, check_no, account.id, check_no]);
 
-                                    executeUpdate();
-                                });
-                    } else {
-                        if (check_no !== currentVoucher.check_no) {
-                             db.run("UPDATE checks SET check_number = ?, status = ? WHERE id = ?", [check_no, status === 'Issued' ? 'Issued' : 'Pending', existingCheck.id], (err) => {
-                                 if (err) {
-                                     console.error("Error updating check number:", err);
-                                     if (err.message.includes('UNIQUE constraint failed')) {
-                                         return res.status(400).json({ error: `Check number ${check_no} is already used.` });
-                                     }
-                                     return res.status(500).json({ error: "Error updating check: " + err.message });
-                                 }
-                                 executeUpdate();
-                             });
+                                        executeUpdate();
+                                    });
                         } else {
-                            if (status === 'Issued' && existingCheck.status === 'Pending') {
-                                db.run("UPDATE checks SET status = 'Issued' WHERE id = ?", [existingCheck.id], (err) => {
+                            if (check_no !== currentVoucher.check_no) {
+                                db.run("UPDATE checks SET check_number = ?, status = ? WHERE id = ?", [check_no, status === 'Issued' ? 'Issued' : 'Pending', existingCheck.id], (err) => {
                                     if (err) {
-                                        console.error("Error updating check status:", err);
-                                        return res.status(500).json({ error: "Error updating check status: " + err.message });
+                                        if (err.message.includes('UNIQUE constraint failed')) {
+                                            return res.status(400).json({ error: `Check number ${check_no} is already used.` });
+                                        }
+                                        return res.status(500).json({ error: "Error updating check: " + err.message });
                                     }
                                     executeUpdate();
                                 });
                             } else {
-                                executeUpdate();
+                                if (status === 'Issued' && existingCheck.status === 'Pending') {
+                                    db.run("UPDATE checks SET status = 'Issued' WHERE id = ?", [existingCheck.id], (err) => {
+                                        if (err) return res.status(500).json({ error: "Error updating check status: " + err.message });
+                                        executeUpdate();
+                                    });
+                                } else {
+                                    executeUpdate();
+                                }
                             }
                         }
-                    }
+                    });
                 });
-            });
-        } 
-        // REMOVED deprecated logic for direct Encashment update
-        /*
-        else if (status === 'Issued' && payment_type === 'Encashment' && bank_name && status !== currentVoucher.status) {
-           ...
-        }
-        */
-        else if (status === 'Voided' && status !== currentVoucher.status) {
-             db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
-                if (!err && check) {
-                    db.run("UPDATE checks SET status = 'Voided' WHERE id = ?", [check.id]);
-                    if (check.status === 'Cleared') {
-                        db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [check.bank_account_id], (err, account) => {
-                            if (!err && account) {
-                                const newBalance = account.current_balance + check.amount;
-                                db.serialize(() => {
+            } else if (status === 'Voided' && status !== currentVoucher.status) {
+                db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
+                    if (!err && check) {
+                        db.run("UPDATE checks SET status = 'Voided' WHERE id = ?", [check.id]);
+                        if (check.status === 'Cleared') {
+                            db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [check.bank_account_id], (err, account) => {
+                                if (!err && account) {
+                                    const newBalance = account.current_balance + check.amount;
                                     db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, check.bank_account_id]);
                                     db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, check_no, running_balance) VALUES (?, ?, 'Deposit', 'Void Refund', ?, ?, ?, ?)",
                                         [check.bank_account_id, id, check.amount, `Voided Check: ${check.payee}`, check.check_number, newBalance]);
-                                });
+                                }
+                            });
+                        }
+                    }
+                });
+                executeUpdate();
+            } else {
+                if ((payment_type === 'Check' || payment_type === 'Encashment') && (status === 'Issued' || status === 'Pending Admin')) {
+                    db.get("SELECT id, status, bank_account_id, check_number FROM checks WHERE voucher_id = ?", [id], (err, check) => {
+                        if (check) {
+                            const checkUpdates = [];
+                            const checkParams = [];
+                            if (payee !== undefined && payee !== currentVoucher.payee) { checkUpdates.push("payee = ?"); checkParams.push(payee); }
+                            if (amount !== undefined && amount != currentVoucher.amount) { checkUpdates.push("amount = ?"); checkParams.push(amount); }
+                            if (description !== undefined && description !== currentVoucher.description) { checkUpdates.push("description = ?"); checkParams.push(description); }
+                            if (check_date !== undefined && check_date !== currentVoucher.check_date) { checkUpdates.push("check_date = ?"); checkParams.push(check_date || null); }
+                            if (check_issued_date !== undefined && check_issued_date !== currentVoucher.check_issued_date) { checkUpdates.push("date_issued = ?"); checkParams.push(check_issued_date || null); }
+                            
+                            if (checkUpdates.length > 0) {
+                                const checkSql = "UPDATE checks SET " + checkUpdates.join(", ") + " WHERE id = ?";
+                                checkParams.push(check.id);
+                                db.run(checkSql, checkParams);
                             }
-                        });
-                    }
+
+                            if (check.status === 'Cleared' && amount !== undefined && amount != currentVoucher.amount) {
+                                const diff = amount - currentVoucher.amount;
+                                db.run("UPDATE bank_accounts SET current_balance = current_balance - ? WHERE id = ?", [diff, check.bank_account_id]);
+                                db.run("UPDATE bank_transactions SET amount = ? WHERE check_no = ? AND type = 'Withdrawal'", [amount, check.check_number]);
+                            }
+                        }
+                    });
                 }
-            });
-            executeUpdate();
-        } else {
-            if ((payment_type === 'Check' || payment_type === 'Encashment') && (status === 'Issued' || status === 'Pending Admin')) {
-                 db.get("SELECT id, status, bank_account_id, check_number FROM checks WHERE voucher_id = ?", [id], (err, check) => {
-                    if (check) {
-                        const checkUpdates = [];
-                        const checkParams = [];
-                        if (payee !== undefined && payee !== currentVoucher.payee) { checkUpdates.push("payee = ?"); checkParams.push(payee); }
-                        if (amount !== undefined && amount != currentVoucher.amount) { checkUpdates.push("amount = ?"); checkParams.push(amount); }
-                        if (description !== undefined && description !== currentVoucher.description) { checkUpdates.push("description = ?"); checkParams.push(description); }
-                        if (check_date !== undefined && check_date !== currentVoucher.check_date) { checkUpdates.push("check_date = ?"); checkParams.push(check_date || null); }
-                        
-                        if (checkUpdates.length > 0) {
-                            const checkSql = "UPDATE checks SET " + checkUpdates.join(", ") + " WHERE id = ?";
-                            checkParams.push(check.id);
-                            db.run(checkSql, checkParams);
-                        }
-
-                        if (check.status === 'Cleared' && amount !== undefined && amount != currentVoucher.amount) {
-                             const diff = amount - currentVoucher.amount;
-                             db.run("UPDATE bank_accounts SET current_balance = current_balance - ? WHERE id = ?", [diff, check.bank_account_id]);
-                             db.run("UPDATE bank_transactions SET amount = ? WHERE check_no = ? AND type = 'Withdrawal'", [amount, check.check_number]);
-                        }
-                    }
-                 });
+                executeUpdate();
             }
-            // Removed deprecated direct Encashment deduction logic 
-            /*
-            else if (payment_type === 'Encashment' && status === 'Issued') {
-                ...
-            }
-            */
-
-            executeUpdate();
         }
     });
 });
-
+// ... Stats export remains same as previous ...
 // Get Stats
 router.get('/stats', authenticateToken, (req, res) => {
     const { company_id } = req.query;

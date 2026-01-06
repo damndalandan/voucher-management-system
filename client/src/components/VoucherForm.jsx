@@ -17,6 +17,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
     payment_type: 'Check',
     check_no: '',
     check_date: '', // PDC Date
+    check_issued_date: new Date().toISOString().split('T')[0], // New Check Issue Date
     bank_name: '',
     category: 'Sales',
     urgency: 'Normal',
@@ -45,6 +46,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
         payment_type: initialData.payment_type || 'Check',
         check_no: initialData.check_no || '',
         check_date: initialData.check_date ? initialData.check_date.split('T')[0] : '',
+        check_issued_date: initialData.check_issued_date ? initialData.check_issued_date.split('T')[0] : (initialData.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0]),
         bank_name: initialData.bank_name || '',
         category: initialData.category || 'Sales',
         urgency: initialData.urgency || 'Normal',
@@ -430,6 +432,17 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                                 </div>
                             </div>
 
+                            <CustomInput 
+                                type="date" 
+                                label="Date Check Issued" 
+                                icon={Calendar}
+                                name="check_issued_date" 
+                                required={isLiaisonProcessing}
+                                value={formData.check_issued_date} 
+                                onChange={handleChange} 
+                                className="bg-white"
+                            />
+
                              <CustomInput 
                                 type="date" 
                                 label="Check Date (PDC)" 
@@ -749,6 +762,16 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                             </option>
                             ))}
                         </CustomSelect>
+                        <div className="mt-4">
+                            <CustomInput 
+                                type="date" 
+                                label="Date Check Issued" 
+                                icon={Calendar}
+                                name="check_issued_date" 
+                                value={formData.check_issued_date} 
+                                onChange={handleChange} 
+                            />
+                        </div>
                     </div>
                     <div>
                         <div className="group">

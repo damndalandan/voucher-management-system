@@ -20,7 +20,7 @@ const syncData = () => {
                         if (account) {
                             db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
-                                    [account.id, v.id, v.check_no, v.check_date || null, v.created_at || new Date().toISOString(), v.payee, v.description, v.amount],
+                                    [account.id, v.id, v.check_no, v.check_date || null, v.check_issued_date || v.created_at || new Date().toISOString(), v.payee, v.description, v.amount],
                                     (err) => {
                                         if (!err) {
                                             db.run(`UPDATE checkbooks 

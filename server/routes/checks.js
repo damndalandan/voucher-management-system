@@ -5,7 +5,7 @@ const authenticateToken = require('../middleware/auth');
 
 // Update Check Status
 router.post('/checks/:id/status', authenticateToken, (req, res) => {
-    const { status, date } = req.body; // 'Claimed', 'Cleared', 'Cancelled', date is optional
+    const { status, date, received_by } = req.body; // 'Claimed', 'Cleared', 'Cancelled', date is optional
     const { id } = req.params;
 
     db.get("SELECT * FROM checks WHERE id = ?", [id], (err, check) => {
@@ -78,10 +78,20 @@ router.post('/checks/:id/status', authenticateToken, (req, res) => {
             }
             res.json({ message: "Check marked as Voided" });
         } else {
-            db.run("UPDATE checks SET status = ? WHERE id = ?", [status, id], function(err) {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ message: `Check marked as ${status}` });
+            db.serialize(() => {
+                 db.run("UPDATE checks SET status = ? WHERE id = ?", [status, id]);
+                 if (status === 'Claimed') {
+                     const voucherUpdates = ["status = 'Claimed'"];
+                     const params = [];
+                     if (received_by) {
+                         voucherUpdates.push("received_by = ?");
+                         params.push(received_by);
+                     }
+                     params.push(check.voucher_id);
+                     db.run(`UPDATE vouchers SET ${voucherUpdates.join(', ')} WHERE id = ?`, params);
+                 }
             });
+            res.json({ message: `Check marked as ${status}` });
         }
     });
 });

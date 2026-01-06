@@ -8,7 +8,8 @@ router.get('/banks', authenticateToken, (req, res) => {
     const { company_id } = req.query;
     let sql = `SELECT b.*, c.name as company_name,
                (SELECT SUM(amount) FROM checks WHERE bank_account_id = b.id AND status = 'Issued') as unclaimed_balance,
-               (SELECT COUNT(*) FROM checks WHERE bank_account_id = b.id AND status = 'Issued') as unclaimed_count
+               (SELECT COUNT(*) FROM checks WHERE bank_account_id = b.id AND status = 'Issued') as unclaimed_count,
+               (SELECT next_check_no FROM checkbooks WHERE bank_account_id = b.id AND status = 'Active' ORDER BY id ASC LIMIT 1) as next_check_no
                FROM bank_accounts b 
                LEFT JOIN companies c ON b.company_id = c.id`;
     const params = [];

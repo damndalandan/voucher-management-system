@@ -132,28 +132,37 @@ export const VoucherCopy = ({ data, title, settings }) => {
 
       {/* Signatures */}
       <div className="flex justify-between mt-auto pt-4 text-center text-xs gap-4">
-        <div className="w-1/5">
-          {settings.showPreparedBy && (
-            <>
-              <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate">{data.created_by_user || 'Staff'}</div>
-              <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.preparedByLabel || 'Prepared By'}</div>
-            </>
-          )}
+        {/* Prepared By */}
+        <div className="w-1/4">
+          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
+             <span className="absolute bottom-1 left-0 w-full">{data.created_by_name || data.created_by_user || ''}</span>
+          </div>
+          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.preparedByLabel || 'Prepared By'}</div>
         </div>
-        <div className="w-1/5">
-          <div className="border-b border-gray-900 mb-2 h-6"></div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.checkedByLabel || 'Checked By'}</div>
+
+        {/* Certified By */}
+        <div className="w-1/4">
+          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
+              <span className="absolute bottom-1 left-0 w-full">{data.certified_by || ''}</span>
+          </div>
+          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">Certified By</div>
         </div>
-        <div className="w-1/5">
-          <div className="border-b border-gray-900 mb-2 h-6"></div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.checkIssuedByLabel || 'Check Issued By'}</div>
-        </div>
-        <div className="w-1/5">
-          <div className="border-b border-gray-900 mb-2 h-6"></div>
+
+        {/* Approved By */}
+        <div className="w-1/4">
+          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
+             <span className="absolute bottom-1 left-0 w-full">
+               {data.approved_by || (data.approval_attachment ? 'See Attachment' : '')}
+             </span>
+          </div>
           <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.approvedByLabel || 'Approved By'}</div>
         </div>
-        <div className="w-1/5">
-          <div className="border-b border-gray-900 mb-2 h-6"></div>
+
+        {/* Received By */}
+        <div className="w-1/4">
+          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
+              <span className="absolute bottom-1 left-0 w-full">{data.received_by || ''}</span>
+          </div>
           <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.receivedByLabel || 'Received By'}</div>
           <div className="flex justify-center mt-1 items-center">
              <span className="text-[8px] text-gray-400 mr-1 uppercase tracking-wide">Date</span>

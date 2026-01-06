@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // Get Users
 router.get('/', authenticateToken, (req, res) => {
@@ -10,7 +11,7 @@ router.get('/', authenticateToken, (req, res) => {
     // For now, let's allow authenticated users to see list, but maybe filter sensitive info if needed.
     // Original code allowed public access, so this is already an improvement.
     
-    db.all("SELECT u.id, u.username, u.role, u.company_id, c.name as company_name FROM users u LEFT JOIN companies c ON u.company_id = c.id", [], (err, rows) => {
+    db.all("SELECT u.id, u.username, u.role, u.company_id, u.full_name, u.signature_path, c.name as company_name FROM users u LEFT JOIN companies c ON u.company_id = c.id", [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -56,12 +57,13 @@ router.delete('/:id', authenticateToken, (req, res) => {
 });
 
 // Update User
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, upload.single('signature'), async (req, res) => {
     // Only admin can update users
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Access denied" });
 
     const { id } = req.params;
     const { username, password, role, company_id, full_name } = req.body;
+    const signature_path = req.file ? `/uploads/${req.file.filename}` : null;
     
     let sql = "UPDATE users SET ";
     const params = [];
@@ -88,6 +90,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
     
     if (full_name) { updates.push("full_name = ?"); params.push(full_name); }
+    if (signature_path) { updates.push("signature_path = ?"); params.push(signature_path); }
 
     if (updates.length === 0) return res.status(400).json({ error: "No fields to update" });
 

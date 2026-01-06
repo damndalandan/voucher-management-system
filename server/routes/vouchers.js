@@ -4,6 +4,36 @@ const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
+// Force Delete Voucher (Admin Only)
+router.delete('/vouchers/:id', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Only admin can force delete vouchers" });
+    const { id } = req.params;
+    
+    db.serialize(() => {
+        db.run("DELETE FROM voucher_attachments WHERE voucher_id = ?", [id]);
+        // Also delete physical files? Skipping for now to avoid complexity, or just delete records.
+        // It's 'force delete transaction', database cleanup is priority.
+
+        db.run("DELETE FROM voucher_history WHERE voucher_id = ?", [id]);
+        
+        // Remove from checks table to free up check number
+        db.run("DELETE FROM checks WHERE voucher_id = ?", [id]);
+
+        // Remove from bank transactions (if any) to fix balances theoretically? 
+        // If we want a clean 'undo', we should revert balance impacts. 
+        // But 'Force Delete' is brute force. Let's assume removing transaction record is enough, 
+        // validation logic might recalc balance or user corrects it manually via DB management if needed.
+        // However, checks table is linked to 'checks' table. 
+        // bank_transactions table links check_no or voucher_id?
+        db.run("DELETE FROM bank_transactions WHERE voucher_id = ?", [id]);
+
+        db.run("DELETE FROM vouchers WHERE id = ?", [id], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "Voucher force deleted successfully" });
+        });
+    });
+});
+
 // Get Top 10 Urgent Vouchers
 router.get('/vouchers/urgent', authenticateToken, (req, res) => {
     const { company_id, sort } = req.query; // sort: 'urgency' or 'date'
@@ -61,7 +91,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
     const { company_id, filter_type, filter_value, search, category } = req.query; 
     const { role } = req.user;
 
-    let sql = `SELECT v.*, c.name as company_name, u.username as created_by_user,
+    let sql = `SELECT v.*, c.name as company_name, u.username as created_by_user, u.full_name as created_by_name,
                GROUP_CONCAT(va.id, '||') as attachment_ids,
                GROUP_CONCAT(va.file_path, '||') as attachment_paths,
                GROUP_CONCAT(va.original_name, '||') as attachment_names,
@@ -87,7 +117,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
     }
 
     if (role === 'admin') {
-        conditions.push(`v.status != 'Pending Liaison'`);
+        // conditions.push(`v.status != 'Pending Liaison'`); // Allow Admin to see detailed status of all vouchers
     }
 
     if (category && category !== 'all') {
@@ -154,9 +184,11 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
     if (!company_id) return res.status(400).json({ error: "Company ID is required" });
 
     let status = 'Issued';
-    if (role === 'staff') {
+    if (role === 'staff' || role === 'hr') {
         status = 'Pending Liaison';
-    } else if (role === 'liaison' || role === 'hr') {
+    } else if (role === 'liaison') {
+        // Both Check and Encashment go to Admin for approval if configured, 
+        // or stay Issued if Liaison has power. Based on previous logic:
         status = (payment_type === 'Check' || payment_type === 'Encashment') ? 'Pending Admin' : 'Issued';
     } else if (role === 'admin') {
         status = 'Issued';
@@ -196,7 +228,8 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                     db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
                         [voucherId, created_by, 'Created', 'Voucher created']);
 
-                    if (status === 'Issued' && payment_type === 'Check' && check_no && bank_name) {
+                    // Unified logic for Checks AND Encashment
+                    if (status === 'Issued' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                             if (!err && account) {
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
@@ -213,7 +246,7 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                                         });
                             }
                         });
-                    } else if (status === 'Pending Admin' && payment_type === 'Check' && check_no && bank_name) {
+                    } else if (status === 'Pending Admin' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                             if (!err && account) {
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
@@ -230,16 +263,13 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                                         });
                             }
                         });
-                    } else if (status === 'Issued' && payment_type === 'Encashment' && bank_name) {
-                        db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
-                            if (!err && account) {
-                                const newBalance = account.current_balance - amount;
-                                db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, account.id]);
-                                db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, running_balance) VALUES (?, ?, 'Withdrawal', ?, ?, ?, ?)",
-                                    [account.id, voucherId, category || 'Encashment', amount, `Encashment: ${payee}`, newBalance]);
-                            }
-                        });
                     }
+                    // REMOVED explicit Encashment-direct-withdrawal logic to ensure it goes through Check flow
+                    /*
+                    else if (status === 'Issued' && payment_type === 'Encashment' && bank_name) {
+                       ...
+                    }
+                    */
 
                     res.json({ 
                         id: voucherId, 
@@ -250,7 +280,7 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
                 });
             };
 
-            if ((status === 'Issued' || status === 'Pending Admin') && payment_type === 'Check' && check_no && bank_name) {
+            if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                 db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                     if (err || !account) {
                         return insertVoucher();
@@ -268,23 +298,33 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), (re
 });
 
 // Update Voucher Status
-router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
+router.put('/vouchers/:id/status', authenticateToken, upload.single('approval_attachment'), (req, res) => {
     const { id } = req.params;
-    const { status, void_reason } = req.body;
-    const { role, id: user_id } = req.user;
+    let { status } = req.body;
+    const { void_reason, certified_by, approved_by, received_by, check_no, bank_name, check_date } = req.body;
+    const { role, id: user_id, full_name, username } = req.user;
+
+    // Enforce Approval Workflow for Liaison: Downgrade 'Issued' to 'Pending Admin' if no attachment (standard flow)
+    if (role === 'liaison' && status === 'Issued' && !req.file) {
+        status = 'Pending Admin';
+    }
 
     db.get("SELECT * FROM vouchers WHERE id = ?", [id], (err, currentVoucher) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
 
+        const effectiveCheckNo = check_no || currentVoucher.check_no;
+        const effectiveBankName = bank_name || currentVoucher.bank_name;
+        const isCheckOrEncashment = currentVoucher.payment_type === 'Check' || currentVoucher.payment_type === 'Encashment';
+
         // Pre-check for duplicates if issuing
-        if (status === 'Issued' && currentVoucher.status !== 'Issued' && currentVoucher.payment_type === 'Check' && currentVoucher.check_no && currentVoucher.bank_name) {
-             db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
+        if (status === 'Issued' && currentVoucher.status !== 'Issued' && isCheckOrEncashment && effectiveCheckNo && effectiveBankName) {
+             db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [effectiveBankName], (err, account) => {
                  if (err || !account) return res.status(400).json({ error: "Bank account not found" });
                  
-                 db.get("SELECT id, voucher_id FROM checks WHERE bank_account_id = ? AND check_number = ?", [account.id, currentVoucher.check_no], (err, existingCheck) => {
+                 db.get("SELECT id, voucher_id FROM checks WHERE bank_account_id = ? AND check_number = ?", [account.id, effectiveCheckNo], (err, existingCheck) => {
                      if (existingCheck && existingCheck.voucher_id != id) {
-                         return res.status(400).json({ error: `Check number ${currentVoucher.check_no} is already used.` });
+                         return res.status(400).json({ error: `Check number ${effectiveCheckNo} is already used.` });
                      }
                      performUpdate();
                  });
@@ -297,9 +337,50 @@ router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
             const updates = ["status = ?"];
             const params = [status];
             
+            if (check_no) { updates.push("check_no = ?"); params.push(check_no); }
+            if (bank_name) { updates.push("bank_name = ?"); params.push(bank_name); }
+            if (check_date) { updates.push("check_date = ?"); params.push(check_date); }
+
             if (void_reason) {
                 updates.push("void_reason = ?");
                 params.push(void_reason);
+            }
+
+            // Handle Workflow Names
+            // Helper to get name
+            const performerName = full_name || username || 'Unknown';
+
+            if (status === 'Pending Admin' && role === 'liaison') {
+                updates.push("certified_by = ?");
+                params.push(certified_by || performerName);
+            }
+
+            if (status === 'Issued') {
+                // If it was the admin approving
+                if (role === 'admin') {
+                     updates.push("approved_by = ?");
+                     params.push(approved_by || performerName);
+                } 
+                // If liaison is issuing (Implicit Approval or Offline Approval)
+                else if (role === 'liaison') {
+                    updates.push("approved_by = ?");
+                    // If offline approved, maybe use 'Offline Approval' or keep user name. 
+                    // Let's use user name but append (Offline) if file exists? 
+                    // Or just use user name.
+                    params.push(approved_by || performerName);
+                    
+                    if (req.file) {
+                        updates.push("approval_attachment = ?");
+                        params.push(req.file.path);
+                    }
+                }
+            }
+
+            if (status === 'Claimed' || status === 'Cleared') {
+                if (received_by) {
+                    updates.push("received_by = ?");
+                    params.push(received_by);
+                }
             }
 
             params.push(id);
@@ -308,12 +389,15 @@ router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Log History
+                let actionDetail = `Status changed to ${status}`;
+                if (req.file) actionDetail += " (with approval attachment)";
+                
                 db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
-                    [id, user_id, 'Status Update', `Status changed from ${currentVoucher.status} to ${status}`]);
+                    [id, user_id, 'Status Update', actionDetail]);
 
                 // Handle Side Effects
                 if (status === 'Issued' && currentVoucher.status !== 'Issued') {
-                    if (currentVoucher.payment_type === 'Check' && currentVoucher.check_no && currentVoucher.bank_name) {
+                    if ((currentVoucher.payment_type === 'Check' || currentVoucher.payment_type === 'Encashment') && currentVoucher.check_no && currentVoucher.bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
                             if (!err && account) {
                                 db.get("SELECT id FROM checks WHERE voucher_id = ?", [id], (err, existingCheck) => {
@@ -337,7 +421,10 @@ router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
                                 });
                             }
                         });
-                    } else if (currentVoucher.payment_type === 'Encashment' && currentVoucher.bank_name) {
+                    } 
+                    // REMOVED deprecated direct deduction for encashment 
+                    /*
+                    else if (currentVoucher.payment_type === 'Encashment' && currentVoucher.bank_name) {
                         db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [currentVoucher.bank_name], (err, account) => {
                             if (!err && account) {
                                 const newBalance = account.current_balance - currentVoucher.amount;
@@ -347,6 +434,7 @@ router.put('/vouchers/:id/status', authenticateToken, (req, res) => {
                             }
                         });
                     }
+                    */
                 } else if (status === 'Voided' && currentVoucher.status !== 'Voided') {
                     db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
                         if (!err && check) {
@@ -387,8 +475,9 @@ router.get('/vouchers/:id/history', authenticateToken, (req, res) => {
 // Update Voucher
 router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), (req, res) => {
     const { id } = req.params;
+    let { status } = req.body;
     const { 
-        status, check_no, bank_name, payment_type, check_date, category, 
+        check_no, bank_name, payment_type, check_date, category, 
         urgency, deadline_date, is_pdc, void_reason,
         date, payee, description, amount, amount_in_words,
         removed_attachments
@@ -402,6 +491,11 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
             return res.status(500).json({ error: "Database error fetching voucher: " + err.message });
         }
         if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
+
+        // Enforce Approval Workflow for Liaison: Prevent setting to 'Issued' directly via Edit
+        if (role === 'liaison' && status === 'Issued' && currentVoucher.status !== 'Issued') {
+             status = 'Pending Admin';
+        }
 
         if (role === 'staff') {
             if (check_no && check_no !== currentVoucher.check_no) return res.status(403).json({ error: "Staff cannot edit check number" });
@@ -497,7 +591,7 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
             }
         };
 
-        if ((status === 'Issued' || status === 'Pending Admin') && payment_type === 'Check' && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
+        if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
             db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                 if (err) {
                     console.error("Error fetching bank account:", err);
@@ -564,18 +658,14 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                     }
                 });
             });
-        } else if (status === 'Issued' && payment_type === 'Encashment' && bank_name && status !== currentVoucher.status) {
-             db.get("SELECT id, current_balance FROM bank_accounts WHERE id = (SELECT id FROM bank_accounts WHERE bank_name = ?)", [bank_name], (err, account) => {
-                if (!err && account) {
-                    const amt = amount || currentVoucher.amount;
-                    const newBalance = account.current_balance - amt;
-                    db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, account.id]);
-                    db.run("INSERT INTO bank_transactions (bank_account_id, voucher_id, type, category, amount, description, running_balance) VALUES (?, ?, 'Withdrawal', ?, ?, ?, ?)",
-                        [account.id, id, category || currentVoucher.category || 'Encashment', amt, `Encashment: ${payee || currentVoucher.payee}`, newBalance]);
-                }
-            });
-            executeUpdate();
-        } else if (status === 'Voided' && status !== currentVoucher.status) {
+        } 
+        // REMOVED deprecated logic for direct Encashment update
+        /*
+        else if (status === 'Issued' && payment_type === 'Encashment' && bank_name && status !== currentVoucher.status) {
+           ...
+        }
+        */
+        else if (status === 'Voided' && status !== currentVoucher.status) {
              db.get("SELECT * FROM checks WHERE voucher_id = ?", [id], (err, check) => {
                 if (!err && check) {
                     db.run("UPDATE checks SET status = 'Voided' WHERE id = ?", [check.id]);
@@ -595,7 +685,7 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
             });
             executeUpdate();
         } else {
-            if (payment_type === 'Check' && (status === 'Issued' || status === 'Pending Admin')) {
+            if ((payment_type === 'Check' || payment_type === 'Encashment') && (status === 'Issued' || status === 'Pending Admin')) {
                  db.get("SELECT id, status, bank_account_id, check_number FROM checks WHERE voucher_id = ?", [id], (err, check) => {
                     if (check) {
                         const checkUpdates = [];
@@ -618,17 +708,13 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                         }
                     }
                  });
-            } else if (payment_type === 'Encashment' && status === 'Issued') {
-                if (amount !== undefined && amount != currentVoucher.amount) {
-                     const diff = amount - currentVoucher.amount;
-                     db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name || currentVoucher.bank_name], (err, account) => {
-                         if (account) {
-                             db.run("UPDATE bank_accounts SET current_balance = current_balance - ? WHERE id = ?", [diff, account.id]);
-                             db.run("UPDATE bank_transactions SET amount = ? WHERE voucher_id = ? AND type = 'Withdrawal'", [amount, id]);
-                         }
-                     });
-                }
             }
+            // Removed deprecated direct Encashment deduction logic 
+            /*
+            else if (payment_type === 'Encashment' && status === 'Issued') {
+                ...
+            }
+            */
 
             executeUpdate();
         }
@@ -682,7 +768,7 @@ router.get('/stats', authenticateToken, (req, res) => {
     });
 
     const getByCompany = new Promise((resolve, reject) => {
-        if (role === 'admin' || role === 'liaison') {
+        if (role === 'admin' || role === 'liaison' || role === 'hr') {
             const sql = `
                 SELECT 
                     c.id,

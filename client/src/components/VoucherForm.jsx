@@ -275,7 +275,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
   const canEditCheckNo = canEditCheckDetails && !(user.role === 'liaison' && initialData?.status === 'Issued');
 
   // Disabled specialized view to allow full editing for Liaison
-  if (false && isLiaisonProcessing) {
+  if (isLiaisonProcessing) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
@@ -315,10 +315,14 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-200 mb-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-gray-200 mb-3">
                             <div>
                                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Issued Date</span>
                                 <div className="font-medium text-xs text-gray-900">{formData.date}</div>
+                            </div>
+                            <div>
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Created By</span>
+                                <div className="font-medium text-xs text-gray-900">{initialData?.created_by_name || 'System'}</div>
                             </div>
                             <div>
                                 <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Category</span>
@@ -482,9 +486,46 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-12 gap-4">
-              {/* Row 1: Company, Date, Deadline */}
-              {canSelectCompany ? (
-                  <div className="col-span-12 md:col-span-4">
+              {/* Row 1: Date & Deadline */}
+              <div className="col-span-12 md:col-span-6">
+                <CustomInput 
+                    type="date" 
+                    label="Issued Date" 
+                    icon={Calendar}
+                    name="date" 
+                    required 
+                    value={formData.date} 
+                    onChange={handleChange} 
+                />
+              </div>
+
+              <div className="col-span-12 md:col-span-6">
+                <CustomInput 
+                    type="date" 
+                    label="Deadline" 
+                    icon={Clock}
+                    name="deadline_date" 
+                    value={formData.deadline_date} 
+                    onChange={handleChange} 
+                />
+              </div>
+
+              {/* Row 2: Payee, Company, Category */}
+              <div className={`col-span-12 ${canSelectCompany ? 'md:col-span-6' : 'md:col-span-8'}`}>
+                <CustomInput 
+                    type="text" 
+                    label="Payee" 
+                    icon={User}
+                    name="payee" 
+                    required 
+                    placeholder="Enter payee name"
+                    value={formData.payee} 
+                    onChange={handleChange} 
+                />
+              </div>
+
+              {canSelectCompany && (
+                  <div className="col-span-12 md:col-span-3">
                     <CustomSelect 
                         label="Company" 
                         icon={Building}
@@ -499,48 +540,9 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                         ))}
                     </CustomSelect>
                   </div>
-              ) : (
-                  <div className="hidden"></div>
               )}
-              
-              <div className={`col-span-12 ${canSelectCompany ? 'md:col-span-4' : 'md:col-span-6'}`}>
-                <CustomInput 
-                    type="date" 
-                    label="Issued Date" 
-                    icon={Calendar}
-                    name="date" 
-                    required 
-                    value={formData.date} 
-                    onChange={handleChange} 
-                />
-              </div>
 
-              <div className={`col-span-12 ${canSelectCompany ? 'md:col-span-4' : 'md:col-span-6'}`}>
-                <CustomInput 
-                    type="date" 
-                    label="Deadline" 
-                    icon={Clock}
-                    name="deadline_date" 
-                    value={formData.deadline_date} 
-                    onChange={handleChange} 
-                />
-              </div>
-
-              {/* Row 2: Payee & Category */}
-              <div className="col-span-12 md:col-span-8">
-                <CustomInput 
-                    type="text" 
-                    label="Payee" 
-                    icon={User}
-                    name="payee" 
-                    required 
-                    placeholder="Enter payee name"
-                    value={formData.payee} 
-                    onChange={handleChange} 
-                />
-              </div>
-
-              <div className="col-span-12 md:col-span-4">
+              <div className={`col-span-12 ${canSelectCompany ? 'md:col-span-3' : 'md:col-span-4'}`}>
                 <CustomSelect 
                     label="Category" 
                     icon={Tag}

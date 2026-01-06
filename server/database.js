@@ -1,7 +1,31 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const dbPath = path.resolve(__dirname, 'vouchers.db');
+const restorePath = path.resolve(__dirname, 'restore_pending.db');
+
+// Check for pending restore
+if (fs.existsSync(restorePath)) {
+    console.log("Found pending database restore. Overwriting database...");
+    try {
+        // Try to delete journal/wal files if they exist to prevent corruption/locking
+        const walPath = dbPath + '-wal';
+        const shmPath = dbPath + '-shm';
+        const journalPath = dbPath + '-journal';
+        
+        try { if (fs.existsSync(walPath)) fs.unlinkSync(walPath); } catch (e) { console.warn('Could not delete WAL file', e.message); }
+        try { if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath); } catch (e) { console.warn('Could not delete SHM file', e.message); }
+        try { if (fs.existsSync(journalPath)) fs.unlinkSync(journalPath); } catch (e) { console.warn('Could not delete Journal file', e.message); }
+
+        fs.copyFileSync(restorePath, dbPath);
+        fs.unlinkSync(restorePath);
+        console.log("Database restored successfully from pending file.");
+    } catch (e) {
+        console.error("Error restoring database from pending file:", e);
+    }
+}
+
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database', err.message);
@@ -127,6 +151,17 @@ function initDb() {
                 db.run("ALTER TABLE vouchers ADD COLUMN check_date TEXT", () => {}); // PDC Date
                 db.run("ALTER TABLE vouchers ADD COLUMN attachment_path TEXT", () => {}); // File path for attachment
                 db.run("ALTER TABLE vouchers ADD COLUMN void_reason TEXT", () => {}); // Reason for voiding
+                
+                // Add signature_path to users if it doesn't exist
+                db.run("ALTER TABLE users ADD COLUMN signature_path TEXT", () => {});
+                // Add new_signature_path to profile_update_requests if it doesn't exist
+                db.run("ALTER TABLE profile_update_requests ADD COLUMN new_signature_path TEXT", () => {});
+
+                // Add columns for signature workflow
+                db.run("ALTER TABLE vouchers ADD COLUMN certified_by TEXT", () => {});
+                db.run("ALTER TABLE vouchers ADD COLUMN approved_by TEXT", () => {});
+                db.run("ALTER TABLE vouchers ADD COLUMN received_by TEXT", () => {});
+                db.run("ALTER TABLE vouchers ADD COLUMN approval_attachment TEXT", () => {});
             }
         });
 

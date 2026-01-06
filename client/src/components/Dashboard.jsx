@@ -4,7 +4,7 @@ import {
   LogOut, Plus, Printer, RefreshCw, CheckCircle, Search, Filter, Calendar, X, 
   TrendingUp, Clock, FileCheck, Building, Settings, Edit, CreditCard, AlertTriangle,
   LayoutDashboard, FileText, ChevronDown, ChevronRight, User, Menu,
-  Trash2, UserPlus, Save, Download, Database, Eye, Users, Paperclip, ExternalLink
+  Trash2, UserPlus, Save, Download, Upload, Database, Eye, Users, Paperclip, ExternalLink
 } from 'lucide-react';
 import VoucherForm from './VoucherForm';
 import VoucherTemplate from './VoucherTemplate';
@@ -248,38 +248,38 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl transform transition-all scale-100 border border-gray-100 flex flex-col max-h-[90vh]">
         {/* Header - Fixed */}
-        <div className="flex justify-between items-center p-5 border-b border-gray-100">
+        <div className="flex justify-between items-center p-3 border-b border-gray-100">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <div className="bg-blue-600 p-1.5 rounded-lg text-white shadow-lg shadow-blue-200">
-                <FileText size={20} />
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <div className="bg-blue-600 p-1 rounded-lg text-white shadow-lg shadow-blue-200">
+                <FileText size={18} />
               </div>
               Voucher Details
             </h3>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar space-y-5">
+        <div className="p-4 overflow-y-auto custom-scrollbar space-y-3">
           
           {/* Top Row: Basic Info */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Voucher No</label>
-              <div className="text-base font-mono font-bold text-gray-900">{voucher.voucher_no}</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Voucher No</label>
+              <div className="text-sm font-mono font-bold text-gray-900">{voucher.voucher_no}</div>
             </div>
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
-              <div className="text-base font-medium text-gray-900">{new Date(voucher.date).toLocaleDateString()}</div>
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date</label>
+              <div className="text-sm font-medium text-gray-900">{new Date(voucher.date).toLocaleDateString()}</div>
             </div>
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Status</label>
               <span className={`text-xs font-bold ${
                   voucher.status === 'Issued' ? 'text-green-700' : 
                   voucher.status === 'Pending Admin' ? 'text-purple-700' :
@@ -293,8 +293,8 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
                   {voucher.status}
               </span>
             </div>
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Urgency</label>
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Urgency</label>
               <span className={`text-xs font-bold ${
                   voucher.urgency === 'Critical' ? 'text-red-700' :
                   voucher.urgency === 'Urgent' ? 'text-orange-700' :
@@ -305,41 +305,52 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+             <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Created By</label>
+              <div className="text-sm font-medium text-gray-900 truncate">{voucher.created_by_name || voucher.created_by_user || 'System'}</div>
+            </div>
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Certified By</label>
+              <div className="text-sm font-medium text-gray-900 truncate">{voucher.certified_by || '-'}</div>
+            </div>
+          </div>
+
           {/* Payee & Amount */}
-          <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex flex-col md:flex-row justify-between items-center gap-2">
             <div className="w-full md:w-auto">
-              <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Payee</label>
-              <div className="text-lg font-bold text-gray-900">{voucher.payee}</div>
+              <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Payee</label>
+              <div className="text-base font-bold text-gray-900">{voucher.payee}</div>
             </div>
             <div className="w-full md:w-auto text-left md:text-right">
-              <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Amount</label>
-              <div className="text-2xl font-bold text-gray-900 font-mono">
+              <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Amount</label>
+              <div className="text-xl font-bold text-gray-900 font-mono">
                 {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(voucher.amount)}
               </div>
             </div>
           </div>
 
           {/* Description */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Particulars / Description</label>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">{voucher.description || 'No description provided.'}</p>
+          <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Particulars / Description</label>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto custom-scrollbar">{voucher.description || 'No description provided.'}</p>
           </div>
 
           {/* Void Reason */}
           {voucher.void_reason && (
-            <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-              <label className="block text-[10px] font-bold text-red-500 uppercase tracking-wider mb-2">Void Reason</label>
+            <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+              <label className="block text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Void Reason</label>
               <p className="text-sm text-red-700 font-medium">{voucher.void_reason}</p>
             </div>
           )}
 
           {/* Attachments */}
           {(voucher.attachment_paths || voucher.attachment_path) && (
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Paperclip size={12} /> Attachments
                 </label>
-                <div className="space-y-2">
+                <div className="space-y-1">
                     {/* Handle legacy single attachment */}
                     {voucher.attachment_path && !voucher.attachment_paths && (
                         <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
@@ -392,8 +403,8 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
 
           {/* Bank Details (if issued or check payment) */}
           {(voucher.bank_name || voucher.payment_type === 'Check') && (
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+            <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2 text-sm">
                 <Building size={16} className="text-gray-400" /> Bank Details
               </h4>
               <div className="grid grid-cols-3 gap-4">
@@ -433,7 +444,7 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
         </div>
         
         {/* Footer Actions - Fixed */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-end">
+        <div className="p-3 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-end">
           <button 
             onClick={onClose}
             className="px-5 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-lg text-sm transition-colors shadow-sm"
@@ -446,8 +457,41 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
   );
 };
 
-const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
+const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks }) => {
+  const [checkNo, setCheckNo] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [checkDate, setCheckDate] = useState('');
+
+  useEffect(() => {
+     if (isOpen && voucher) {
+         setCheckNo(voucher.check_no || '');
+         setBankName(voucher.bank_name || '');
+         setCheckDate(voucher.check_date ? voucher.check_date.split('T')[0] : '');
+     }
+  }, [isOpen, voucher]);
+
   if (!isOpen || !voucher) return null;
+  
+  const isLiaison = user?.role === 'liaison';
+  const isCheckOrEncashment = voucher.payment_type === 'Check' || voucher.payment_type === 'Encashment';
+  // Always allow Liaison to edit/verify check details during approval
+  const showCheckInputs = isLiaison && isCheckOrEncashment; 
+
+  const handleConfirm = () => {
+      if (showCheckInputs) {
+          if (!bankName) {
+              alert("Please select a bank");
+              return;
+          }
+          if (!checkNo) {
+              alert("Please enter a check number");
+              return;
+          }
+          onConfirm({ check_no: checkNo, bank_name: bankName, check_date: checkDate || null });
+      } else {
+          onConfirm();
+      }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
@@ -458,8 +502,8 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
                     <CheckCircle size={24} />
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold text-gray-900">Approve Issuance</h3>
-                    <p className="text-xs text-gray-500 font-medium">Review details before approving</p>
+                    <h3 className="text-xl font-bold text-gray-900">{isLiaison ? 'Process Issuance Details' : 'Approve Issuance'}</h3>
+                    <p className="text-xs text-gray-500 font-medium">Review details before {isLiaison ? 'submitting' : 'approving'}</p>
                 </div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
@@ -475,6 +519,14 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
                     <div className="font-medium text-gray-900">{new Date(voucher.date).toLocaleDateString()}</div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Created By</label>
+                    <div className="font-medium text-gray-900 truncate">{voucher.created_by_name || voucher.created_by_user || 'System'}</div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Certified By</label>
+                    <div className="font-medium text-gray-900 truncate">{voucher.certified_by || '-'}</div>
                 </div>
             </div>
 
@@ -523,7 +575,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
                             <div className="font-medium text-sm text-gray-900">{voucher.payment_type}</div>
                         </div>
                         
-                        {(voucher.payment_type === 'Check' || voucher.check_no) && (
+                        {(isCheckOrEncashment && !showCheckInputs && (voucher.check_no || voucher.bank_name)) && (
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-3">
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Bank</label>
@@ -544,6 +596,58 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
                                     <div className="font-medium text-sm text-gray-900">{voucher.check_date ? 'Post Dated Check' : 'Standard Check'}</div>
                                 </div>
                             </div>
+                        )}
+
+                        {showCheckInputs && (
+                             <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-4 animate-fade-in">
+                                <h5 className="font-bold text-orange-800 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                                    <AlertTriangle size={12} /> Action Required
+                                </h5>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Bank Account</label>
+                                    <select 
+                                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                                        value={bankName}
+                                        onChange={(e) => {
+                                            const selected = e.target.value;
+                                            setBankName(selected);
+                                            const bank = banks.find(b => b.bank_name === selected);
+                                            if (bank && bank.next_check_no) {
+                                                setCheckNo(bank.next_check_no);
+                                            }
+                                        }}
+                                    >
+                                        <option value="">Select Bank</option>
+                                        {(banks || []).filter(b => !b.company_id || b.company_id == voucher.company_id).map(b => (
+                                            <option key={b.id} value={b.bank_name}>{b.bank_name} ({b.account_number})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Check Number</label>
+                                        <input 
+                                            type="text" 
+                                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            placeholder="0000000000"
+                                            value={checkNo}
+                                            onChange={(e) => setCheckNo(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Check Date (PDC)</label>
+                                        <input 
+                                            type="date"
+                                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" 
+                                            value={checkDate}
+                                            onChange={(e) => setCheckDate(e.target.value)}
+                                            title="Leave empty for Standard Check"
+                                        />
+                                    </div>
+                                </div>
+                             </div>
                         )}
                     </div>
                 </div>
@@ -612,11 +716,11 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher }) => {
                 Cancel
             </button>
             <button 
-                onClick={onConfirm}
+                onClick={handleConfirm}
                 className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-green-200 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
             >
                 <CheckCircle size={18} />
-                Confirm Approval
+                {showCheckInputs ? 'Submit for Admin Approval' : 'Confirm Approval'}
             </button>
         </div>
       </div>
@@ -871,8 +975,12 @@ const Dashboard = ({ user, onLogout }) => {
   const [voucherToCancel, setVoucherToCancel] = useState(null);
   const [deleteCompanyModalOpen, setDeleteCompanyModalOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState(null);
+  const [forceDeleteModalOpen, setForceDeleteModalOpen] = useState(false);
+  const [voucherToForceDelete, setVoucherToForceDelete] = useState(null);
   const [adminPassword, setAdminPassword] = useState('');
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [fileToImport, setFileToImport] = useState(null);
 
   const showAlert = (message, type = 'info') => {
     setAlertModal({ 
@@ -887,7 +995,7 @@ const Dashboard = ({ user, onLogout }) => {
   const dashboardSlides = useMemo(() => {
     let slides = [{ id: 'all', name: 'All Activity', data: vouchers, pending: 0 }];
     
-    if (user.role === 'admin' || user.role === 'liaison') {
+    if (user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') {
         const companySlides = companies.map(c => {
             const companyVouchers = vouchers.filter(v => v.company_id === c.id);
             const companyStat = stats?.by_company?.find(s => s.id === c.id);
@@ -924,6 +1032,7 @@ const Dashboard = ({ user, onLogout }) => {
   
   // Settings Form State
   const [profileForm, setProfileForm] = useState({ username: '', password: '', full_name: '' });
+  const [signatureFile, setSignatureFile] = useState(null);
   const [newCategory, setNewCategory] = useState('');
   const [selectedCategoryCompany, setSelectedCategoryCompany] = useState('');
   const [selectedIssuanceCompany, setSelectedIssuanceCompany] = useState(null);
@@ -951,7 +1060,16 @@ const Dashboard = ({ user, onLogout }) => {
     receivedByLabel: 'Received By'
   });
 
+  // Offline Approval & Claim State
+  const [offlineApproveModalOpen, setOfflineApproveModalOpen] = useState(false);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const [approvalAttachment, setApprovalAttachment] = useState(null);
+  const [receivedByName, setReceivedByName] = useState('');
+  const [voucherToOfflineApprove, setVoucherToOfflineApprove] = useState(null);
+  const [voucherToClaim, setVoucherToClaim] = useState(null);
+
   const componentRef = useRef();
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('voucher_print_settings');
@@ -964,7 +1082,7 @@ const Dashboard = ({ user, onLogout }) => {
     fetchStats();
     fetchBanks();
     fetchCategories();
-    if (user.role === 'admin' || user.role === 'liaison') {
+    if (user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') {
         fetchCompanies();
     }
     // Initial fetch for vouchers if on issuances or dashboard (if we show recent)
@@ -1029,13 +1147,16 @@ const Dashboard = ({ user, onLogout }) => {
     e.preventDefault();
     try {
       const companyId = user.company_id || selectedCategoryCompany;
-      if (!companyId) {
+      
+      // Admin must select a company for general categories
+      if (user.role === 'admin' && !companyId) {
           showAlert("Please select a company first", 'error');
           return;
       }
+      
       await axios.post('http://localhost:5000/api/categories', { 
           name: newCategory,
-          company_id: companyId 
+          company_id: companyId || null // Send null if empty string
       });
       setNewCategory('');
       fetchCategories();
@@ -1123,7 +1244,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchProfileRequests = async () => {
     try {
-        const res = await axios.get('http://localhost:5000/api/profile/requests');
+        const res = await axios.get('http://localhost:5000/api/profile/requests/pending');
         setProfileRequests(res.data || []);
     } catch (err) {
         console.error(err);
@@ -1187,6 +1308,45 @@ const Dashboard = ({ user, onLogout }) => {
     window.open('http://localhost:5000/api/backup', '_blank');
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFileToImport(file);
+      setImportModalOpen(true);
+    }
+    e.target.value = '';
+  };
+
+  const confirmImport = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('database', fileToImport);
+      
+      // Use direct path as axios instance has baseURL configured
+      await axios.post('/restore', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setImportModalOpen(false);
+      setFileToImport(null);
+      showAlert('Database restored successfully. Reloading...', 'success');
+      setTimeout(() => {
+          window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('Import error:', error);
+      let msg = error.response?.data?.error;
+      if (!msg) {
+          msg = error.message ? `Failed to restore database: ${error.message}` : 'Failed to restore database (Unknown error)';
+      }
+      showAlert(msg, 'error');
+    }
+  };
+
   const handleReset = () => {
     setResetModalOpen(true);
   };
@@ -1206,26 +1366,43 @@ const Dashboard = ({ user, onLogout }) => {
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     try {
+        const formData = new FormData();
+        formData.append('username', profileForm.username);
+        if (profileForm.password) formData.append('password', profileForm.password);
+        formData.append('full_name', profileForm.full_name);
+        if (signatureFile) formData.append('signature', signatureFile);
+
         if (user.role === 'admin') {
-            await axios.put(`http://localhost:5000/api/users/${user.id}`, {
-                username: profileForm.username,
-                password: profileForm.password || undefined,
-                full_name: profileForm.full_name
+            await axios.put(`http://localhost:5000/api/users/${user.id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
             showAlert('Profile updated successfully.', 'success');
             fetchProfile();
         } else {
-            await axios.post('http://localhost:5000/api/profile/request', {
-                user_id: user.id,
-                new_username: profileForm.username,
-                new_password: profileForm.password || undefined,
-                new_full_name: profileForm.full_name
+            formData.append('user_id', user.id);
+            // Rename username/password fields for request endpoint if needed, but endpoint expects new_username etc
+            // But wait, the FormData keys need to match what the endpoint expects.
+            // Admin PUT expects: username, password, full_name, signature
+            // Request POST expects: user_id, new_username, new_password, new_full_name, signature (from file)
+            
+            // Let's create a NEW FormData for the request to be clean
+            const requestData = new FormData();
+            requestData.append('user_id', user.id);
+            requestData.append('new_username', profileForm.username);
+            if (profileForm.password) requestData.append('new_password', profileForm.password);
+            requestData.append('new_full_name', profileForm.full_name);
+            if (signatureFile) requestData.append('signature', signatureFile);
+
+            await axios.post('http://localhost:5000/api/profile/request', requestData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            showAlert('Profile update request submitted for approval.', 'success');
+            showAlert('Profile update request submitted for Admin approval.', 'success');
         }
         setIsEditingProfile(false);
+        setSignatureFile(null); // Reset file input
     } catch (err) {
-        showAlert('Error submitting request', 'error');
+        console.error(err);
+        showAlert('Error submitting request: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
@@ -1312,18 +1489,98 @@ const Dashboard = ({ user, onLogout }) => {
     setApproveModalOpen(true);
   };
 
-  const confirmApprove = async () => {
+  const confirmApprove = async (extraData = {}) => {
     if (!voucherToApprove) return;
     try {
-      await axios.put(`http://localhost:5000/api/vouchers/${voucherToApprove.id}/status`, { status: 'Issued' });
+      const isLiaison = user.role === 'liaison';
+      const targetStatus = isLiaison ? 'Pending Admin' : 'Issued';
+
+      await axios.put(`http://localhost:5000/api/vouchers/${voucherToApprove.id}/status`, { 
+        status: targetStatus,
+        ...extraData
+      });
       fetchVouchers();
       fetchStats();
       setApproveModalOpen(false);
       setVoucherToApprove(null);
+      if (isLiaison) {
+        showAlert('Voucher submitted for Admin approval', 'success');
+      }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Error approving voucher';
       showAlert(errorMessage, 'error');
     }
+  };
+
+  const handleOfflineApprove = (voucher) => {
+      setVoucherToOfflineApprove(voucher);
+      setApprovalAttachment(null);
+      setOfflineApproveModalOpen(true);
+  };
+
+  const confirmOfflineApprove = async () => {
+      if (!voucherToOfflineApprove || !approvalAttachment) {
+          showAlert("Please upload the approval document", "error");
+          return;
+      }
+      try {
+          const formData = new FormData();
+          formData.append('status', 'Issued');
+          formData.append('approval_attachment', approvalAttachment);
+          // Optional: we could add manually typed approver name if we add an input for it. 
+          // For now, let's assume 'Offline Approval' or similar is handled by backend default logic unless we add input.
+          // Or let's just add 'Offline Approval (Attachment)' as approved_by if we want.
+          formData.append('approved_by', 'Offline Approval');
+
+          await axios.put(`/vouchers/${voucherToOfflineApprove.id}/status`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          
+          fetchVouchers();
+          fetchStats();
+          setOfflineApproveModalOpen(false);
+          setVoucherToOfflineApprove(null);
+          setApprovalAttachment(null);
+          showAlert('Voucher approved with attachment', 'success');
+      } catch (err) {
+          console.error(err);
+          showAlert(err.response?.data?.error || 'Error processing offline approval', 'error');
+      }
+  };
+
+  const handleClaim = (voucher) => {
+      setVoucherToClaim(voucher);
+      setReceivedByName('');
+      setClaimModalOpen(true);
+  };
+
+  const confirmClaim = async () => {
+      if (!voucherToClaim || !receivedByName.trim()) {
+          showAlert("Please enter who received the payment", "error");
+          return;
+      }
+      try {
+          await axios.put(`/vouchers/${voucherToClaim.id}/status`, {
+              status: voucherToClaim.payment_type === 'Check' ? 'Claimed' : 'Issued', // If Encashment, 'Issued' is kinda final unless we have 'Claimed' for it too.
+              // Actually, User wants to record 'received_by'.
+              // For Checks, status -> 'Claimed' is standard.
+              // For Encashment, status -> 'Claimed' might be fine too if we support it.
+              // Let's use 'Claimed' for consistent tracking.
+              received_by: receivedByName
+          });
+
+           // If it was a check, this might need to sync with checks table?
+           // The backend logic handles "Claimed" update for checks table if check exists.
+           // But wait, my checks code handles 'Claimed' status.
+
+          fetchVouchers();
+          setClaimModalOpen(false);
+          setVoucherToClaim(null);
+          setReceivedByName('');
+          showAlert('Voucher marked as claimed', 'success');
+      } catch (err) {
+          showAlert(err.response?.data?.error || 'Error marking as claimed', 'error');
+      }
   };
 
   const handleRequestVoid = (id) => {
@@ -1393,6 +1650,25 @@ const Dashboard = ({ user, onLogout }) => {
     } catch (err) {
       showAlert('Error cancelling voucher', 'error');
     }
+  };
+
+  const handleForceDelete = (voucher) => {
+      setVoucherToForceDelete(voucher);
+      setForceDeleteModalOpen(true);
+  };
+
+  const confirmForceDelete = async () => {
+      if (!voucherToForceDelete) return;
+      try {
+          await axios.delete(`http://localhost:5000/api/vouchers/${voucherToForceDelete.id}`);
+          fetchVouchers();
+          fetchStats();
+          setForceDeleteModalOpen(false);
+          setVoucherToForceDelete(null);
+          showAlert('Voucher force deleted successfully. Check number is now potentially reusable.', 'success');
+      } catch (err) {
+          showAlert(err.response?.data?.error || 'Error deleting voucher', 'error');
+      }
   };
 
   const handleProcess = (voucher) => {
@@ -1682,7 +1958,7 @@ const Dashboard = ({ user, onLogout }) => {
                                 </p>
                             </div>
 
-                            {(user.role === 'admin' || user.role === 'liaison') && (
+                            {(user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') && (
                                 <div className="inline-block">
                                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                                         {bank.company_name}
@@ -1894,7 +2170,7 @@ const Dashboard = ({ user, onLogout }) => {
                         <span className="text-blue-100 text-sm">Browse all vouchers</span>
                     </button>
 
-                    {(user.role === 'admin' || user.role === 'liaison') && (
+                    {(user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') && (
                         <>
                             <button 
                                 onClick={() => setActiveView('banks-dashboard')}
@@ -1931,7 +2207,7 @@ const Dashboard = ({ user, onLogout }) => {
     const selectedCompanyName = companies.find(c => c.id == selectedIssuanceCompany)?.name;
 
     // If no company selected and user is Admin/Liaison, show Overview Dashboard
-    if (!selectedIssuanceCompany && (user.role === 'admin' || user.role === 'liaison')) {
+    if (!selectedIssuanceCompany && (user.role === 'admin' || user.role === 'liaison' || user.role === 'hr')) {
         return renderIssuancesOverview();
     }
 
@@ -2114,6 +2390,9 @@ const Dashboard = ({ user, onLogout }) => {
                                     <Clock size={18} />
                                 </button>
                             )}
+                            <button onClick={() => handleForceDelete(voucher)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Force Delete (Admin Only)">
+                                <Trash2 size={18} />
+                            </button>
                         </div>
                     )}
                     {user.role === 'admin' && voucher.status === 'Void Pending Approval' && (
@@ -2126,14 +2405,35 @@ const Dashboard = ({ user, onLogout }) => {
                                     <Clock size={18} />
                                 </button>
                             )}
+                            <button onClick={() => handleForceDelete(voucher)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Force Delete (Admin Only)">
+                                <Trash2 size={18} />
+                            </button>
                         </div>
                     )}
                     {user.role === 'liaison' && voucher.status === 'Pending Liaison' && (
                         <div className="flex justify-center gap-0.5 items-center">
-                            <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Issue Check">
+                            <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                 <Edit size={18} />
                             </button>
+                            <button onClick={() => handleApprove(voucher)} className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors" title="Approve">
+                                <CheckCircle size={18} />
+                            </button>
                             {voucher.history_count > 0 && (
+                                <button onClick={() => setViewingHistory(voucher)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View History">
+                                    <Clock size={18} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {user.role === 'liaison' && voucher.status === 'Pending Admin' && (
+                        <div className="flex justify-center gap-0.5 items-center">
+                            <button onClick={() => handleApprove(voucher)} className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors" title="Approve">
+                                <CheckCircle size={18} />
+                            </button>
+                            <button onClick={() => handleOfflineApprove(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Offline Approval (Upload)">
+                                <Upload size={18} />
+                            </button>
+                             {voucher.history_count > 0 && (
                                 <button onClick={() => setViewingHistory(voucher)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View History">
                                     <Clock size={18} />
                                 </button>
@@ -2160,6 +2460,11 @@ const Dashboard = ({ user, onLogout }) => {
                             <button onClick={() => handlePrint(voucher)} className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Print">
                                 <Printer size={18} />
                             </button>
+                            {user.role === 'liaison' && !voucher.received_by && (
+                                <button onClick={() => handleClaim(voucher)} className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Mark as Claimed/Received">
+                                    <CheckCircle size={18} />
+                                </button>
+                            )}
                             {user.role === 'liaison' && (
                                 <button onClick={() => handleRequestVoid(voucher.id)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Void">
                                     <Trash2 size={18} />
@@ -2170,6 +2475,23 @@ const Dashboard = ({ user, onLogout }) => {
                                     <Clock size={18} />
                                 </button>
                             )}
+                            {user.role === 'admin' && (
+                                <button onClick={() => handleForceDelete(voucher)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Force Delete (Admin Only)">
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {user.role === 'admin' && !['Pending', 'Pending Admin', 'Void Pending Approval', 'Issued'].includes(voucher.status) && (
+                        <div className="flex justify-center gap-0.5 items-center">
+                            {voucher.history_count > 0 && (
+                                <button onClick={() => setViewingHistory(voucher)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View History">
+                                    <Clock size={18} />
+                                </button>
+                            )}
+                            <button onClick={() => handleForceDelete(voucher)} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Force Delete (Admin Only)">
+                                <Trash2 size={18} />
+                            </button>
                         </div>
                     )}
                     </td>
@@ -2358,6 +2680,22 @@ const Dashboard = ({ user, onLogout }) => {
                             placeholder="********"
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">E-Signature</label>
+                         {profileData.signature_path && !signatureFile && (
+                            <div className="mb-2">
+                                <p className="text-xs text-gray-500 mb-1">Current Signature:</p>
+                                <img src={`http://localhost:5000${profileData.signature_path}`} alt="Signature" className="h-16 object-contain border border-gray-200 rounded p-1 bg-white" />
+                            </div>
+                        )}
+                        <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={e => setSignatureFile(e.target.files[0])}
+                            className="w-full border border-gray-300 p-2 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Upload an image of your signature (PNG or JPG).</p>
+                    </div>
                     <div className="flex justify-end gap-3 pt-4">
                         <button 
                             type="button" 
@@ -2375,24 +2713,36 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                 </form>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-                        <div className="text-lg font-medium text-gray-900">{profileData.full_name || 'Not set'}</div>
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
+                            <div className="text-lg font-medium text-gray-900">{profileData.full_name || 'Not set'}</div>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Username</label>
+                            <div className="text-lg font-medium text-gray-900">{profileData.username}</div>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Role</label>
+                            <div className="text-lg font-medium text-gray-900 uppercase">{profileData.role}</div>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company</label>
+                            <div className="text-lg font-medium text-gray-900">{user.company_name || 'All Companies'}</div>
+                        </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Username</label>
-                        <div className="text-lg font-medium text-gray-900">{profileData.username}</div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Role</label>
-                        <div className="text-lg font-medium text-gray-900 uppercase">{profileData.role}</div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Company</label>
-                        <div className="text-lg font-medium text-gray-900">{user.company_name || 'All Companies'}</div>
-                    </div>
-                </div>
+                    {profileData.signature_path && (
+                        <div className="mt-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">E-Signature</label>
+                            <img 
+                                src={`http://localhost:5000${profileData.signature_path}`} 
+                                alt="Your Signature" 
+                                className="h-20 object-contain"
+                            />
+                        </div>
+                    )}
+                </>
               )}
             </>
           ) : (
@@ -2412,7 +2762,6 @@ const Dashboard = ({ user, onLogout }) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
                 <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 sticky top-6">
-                    {user.role === 'admin' && (
                         <div className="mb-6">
                             <label className="block text-sm font-bold text-gray-700 mb-2">Select Company</label>
                             <div className="relative group">
@@ -2420,8 +2769,9 @@ const Dashboard = ({ user, onLogout }) => {
                                     value={selectedCategoryCompany} 
                                     onChange={e => setSelectedCategoryCompany(e.target.value)}
                                     className="w-full border border-gray-300 p-3 rounded-xl appearance-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white hover:bg-gray-50 cursor-pointer"
+                                    disabled={user.role !== 'admin' && user.role !== 'hr'}
                                 >
-                                    <option value="">All Companies (View Only)</option>
+                                    <option value="">{user.role === 'admin' ? 'All Companies (View Only)' : 'Global HR Categories'}</option>
                                     {companies.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
@@ -2430,14 +2780,13 @@ const Dashboard = ({ user, onLogout }) => {
                                     <ChevronDown size={16} strokeWidth={2.5} />
                                 </div>
                             </div>
-                            {!selectedCategoryCompany && (
+                            {!selectedCategoryCompany && user.role === 'admin' && (
                                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                                     <AlertTriangle size={12} /> Select a specific company to add new categories.
                                 </p>
                             )}
-                        </div>
-                    )}
-
+                         </div>
+                    
                     <form onSubmit={handleAddCategory} className="space-y-4">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">New Category Name</label>
@@ -2473,9 +2822,14 @@ const Dashboard = ({ user, onLogout }) => {
                                     </div>
                                     <div>
                                         <span className="text-gray-900 font-bold block">{cat.name}</span>
-                                        {user.role === 'admin' && !selectedCategoryCompany && (
+                                        {((user.role === 'admin' || user.role === 'hr') && !selectedCategoryCompany) && (
                                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 mt-1 inline-block">
-                                                {cat.company_name}
+                                                {cat.company_name || 'Global / ' + (cat.role ? cat.role.toUpperCase() : 'General')}
+                                            </span>
+                                        )}
+                                        {cat.role === 'hr' && cat.company_name && (
+                                            <span className="ml-2 text-xs text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 mt-1 inline-block font-bold">
+                                                HR Only
                                             </span>
                                         )}
                                     </div>
@@ -2867,13 +3221,28 @@ const Dashboard = ({ user, onLogout }) => {
                 Database Management
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
                     <h4 className="font-bold text-gray-900 mb-2">Backup Data</h4>
                     <p className="text-sm text-gray-500 mb-4">Download a copy of the current database file.</p>
                     <button onClick={handleBackup} className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all transform hover:-translate-y-0.5">
                         <Download size={18} /> Download Backup
                     </button>
+                </div>
+
+                <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                    <h4 className="font-bold text-blue-900 mb-2">Import Data</h4>
+                    <p className="text-sm text-blue-700 mb-4">Restore database from a backup file (requires restart).</p>
+                    <button onClick={handleImportClick} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5">
+                        <Upload size={18} /> Import Database
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        className="hidden" 
+                        accept=".db" 
+                    />
                 </div>
 
                 <div className="bg-red-50 p-6 rounded-xl border border-red-100">
@@ -2951,6 +3320,8 @@ const Dashboard = ({ user, onLogout }) => {
         onClose={() => { setApproveModalOpen(false); setVoucherToApprove(null); }}
         onConfirm={confirmApprove}
         voucher={voucherToApprove}
+        user={user}
+        banks={banks}
       />
 
       <VoidReasonModal 
@@ -3012,6 +3383,19 @@ const Dashboard = ({ user, onLogout }) => {
         title="System Reset"
         message="WARNING: This will delete all voucher data. Are you sure?"
         confirmText="Reset Data"
+        confirmColor="red"
+      />
+
+      <ConfirmationModal 
+        isOpen={importModalOpen}
+        onClose={() => {
+            setImportModalOpen(false);
+            setFileToImport(null);
+        }}
+        onConfirm={confirmImport}
+        title="Import Database"
+        message="WARNING: This will overwrite the current database with the imported file. The system will restart. Are you sure?"
+        confirmText="Import & Restart"
         confirmColor="red"
       />
 
@@ -3082,7 +3466,7 @@ const Dashboard = ({ user, onLogout }) => {
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                     onClick={() => {
-                        if (user.role === 'admin' || user.role === 'liaison') {
+                        if (user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') {
                             setIssuancesExpanded(!issuancesExpanded);
                         } else {
                             setActiveView('issuances');
@@ -3090,7 +3474,7 @@ const Dashboard = ({ user, onLogout }) => {
                     }}
                 >
                     <div className="flex items-center flex-1" onClick={(e) => {
-                        if (user.role === 'admin' || user.role === 'liaison') {
+                        if (user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') {
                              // Do nothing, let parent handle expand
                         } else {
                              e.stopPropagation();
@@ -3102,7 +3486,7 @@ const Dashboard = ({ user, onLogout }) => {
                         </div>
                         Issuances
                     </div>
-                    {(user.role === 'admin' || user.role === 'liaison') && (
+                    {(user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') && (
                         <div className={`p-1 rounded-md transition-transform duration-200 ${issuancesExpanded ? 'rotate-180 bg-blue-100 text-blue-600' : 'text-gray-400'}`}>
                             <ChevronDown size={14} />
                         </div>
@@ -3110,7 +3494,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
 
                 {/* Submenu for Issuances */}
-                {(user.role === 'admin' || user.role === 'liaison') && issuancesExpanded && (
+                {(user.role === 'admin' || user.role === 'liaison' || user.role === 'hr') && issuancesExpanded && (
                     <div className="pl-4 space-y-1 animate-fade-in-down">
                         <button 
                             onClick={() => {
@@ -3271,6 +3655,113 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </main>
       </div>
+
+      {/* Offline Approval Modal */}
+      {offlineApproveModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all scale-100 border border-gray-100">
+                  <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                          <div className="bg-green-600 p-1.5 rounded-lg text-white shadow-lg shadow-green-200"><Upload size={18} /></div>
+                          Offline Approval
+                      </h3>
+                      <button onClick={() => setOfflineApproveModalOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+                  </div>
+                  <p className="text-gray-600 mb-6 text-sm">
+                      Upload the signed approval document (Proprietor/Admin signature).
+                      <br/>
+                      <span className="font-bold text-green-700">This will mark the voucher as ISSUED (Approved).</span>
+                  </p>
+                  
+                  <div className="mb-6">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Approval Attachment (PDF/Image)</label>
+                      <input 
+                         type="file"
+                         accept="image/*,application/pdf"
+                         onChange={(e) => setApprovalAttachment(e.target.files[0])}
+                         className="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2.5 file:px-4
+                            file:rounded-xl file:border-0
+                            file:text-sm file:font-bold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100
+                            transition-all cursor-pointer"
+                      />
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                      <button 
+                          onClick={() => setOfflineApproveModalOpen(false)}
+                          className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={confirmOfflineApprove}
+                          disabled={!approvalAttachment}
+                          className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-green-200 text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          <CheckCircle size={18} />
+                          Approve & Issue
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Claim Modal */}
+      {claimModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform transition-all scale-100 border border-gray-100">
+                  <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                          <div className="bg-blue-600 p-1.5 rounded-lg text-white shadow-lg shadow-blue-200"><CheckCircle size={18} /></div>
+                          Mark as Claimed/Received
+                      </h3>
+                      <button onClick={() => setClaimModalOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+                  </div>
+                  
+                  <div className="mb-6">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Received By (Name)</label>
+                      <input 
+                          type="text" 
+                          placeholder="Name of person who received payment"
+                          value={receivedByName}
+                          onChange={(e) => setReceivedByName(e.target.value)}
+                          className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      />
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                      <button 
+                          onClick={() => setClaimModalOpen(false)}
+                          className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={confirmClaim}
+                          disabled={!receivedByName.trim()}
+                          className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          <Save size={18} />
+                          Confirm
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Force Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={forceDeleteModalOpen}
+        onClose={() => setForceDeleteModalOpen(false)}
+        onConfirm={confirmForceDelete}
+        title="Force Delete Voucher"
+        message={`WARNING: This will permanently delete voucher ${voucherToForceDelete?.voucher_no} and remove all related records (checks, attachments, history). The check number will be reusable. This action CANNOT be undone.`}
+        confirmText="Force Delete"
+        confirmColor="red"
+      />
 
       <AddBankModal 
         isOpen={addBankModalOpen}

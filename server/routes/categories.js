@@ -22,34 +22,53 @@ router.get('/categories', authenticateToken, (req, res) => {
     if (company_id) {
         // Specific company requested
         if (role === 'admin') {
-            // Admin sees company categories + ALL role categories (HR/Liaison)
-            conditions.push("(cat.company_id = ? OR cat.role IS NOT NULL)");
+            // Admin sees company categories + ALL role categories (HR/Liaison) relevant to this company view?
+            // Actually, when selecting a company, we want to see general categories for that company 
+            // AND any role-specific categories for that company.
+            conditions.push("(cat.company_id = ? OR (cat.company_id IS NULL AND cat.role IS NOT NULL))");
             params.push(company_id);
         } else if (role === 'hr') {
-            // HR sees company categories + HR categories
-            conditions.push("(cat.company_id = ? OR cat.role = 'hr')");
+            // HR sees company categories (general) + HR categories (global or company-specific)
+            // But Staff should NOT see HR categories.
+            // Staff query uses `role IS NULL`.
+            // HR query:
+            // 1. General Company Categories: company_id = ? AND role IS NULL
+            // 2. HR Specific Company Categories: company_id = ? AND role = 'hr'
+            // 3. Global HR Categories: company_id IS NULL AND role = 'hr'
+            
+            conditions.push("((cat.company_id = ? AND (cat.role IS NULL OR cat.role = 'hr')) OR (cat.company_id IS NULL AND cat.role = 'hr'))");
             params.push(company_id);
         } else if (role === 'liaison') {
-            // Liaison sees company categories + Liaison categories
-            conditions.push("(cat.company_id = ? OR cat.role = 'liaison')");
+            // Similar for Liaison
+            conditions.push("((cat.company_id = ? AND (cat.role IS NULL OR cat.role = 'liaison')) OR (cat.company_id IS NULL AND cat.role = 'liaison'))");
             params.push(company_id);
         } else {
-            // Staff sees only company categories
-            conditions.push("cat.company_id = ?");
+            // Staff sees only general company categories
+            conditions.push("cat.company_id = ? AND cat.role IS NULL");
             params.push(company_id);
         }
     } else {
-        // No company filter (e.g. Management view)
+        // No company filter (e.g. Management view or HR management view)
         if (role === 'admin') {
             // Show everything
         } else if (role === 'hr') {
-            conditions.push("(cat.company_id = ? OR cat.role = 'hr')");
-            params.push(req.user.company_id);
+            // HR sees ALL company categories they have access to?
+            // Actually, if HR is managing categories, they want to see all categories they created or are available to them.
+            // If they have a company_id in user profile, maybe filter by that? 
+            // BUT here we support "Select Company" dropdown for HR. So if company_id is NULL here, 
+            // we probably want to show categories where role='hr' (Global) OR company-specific ones?
+            
+            // Current user context: req.user.company_id might be set if they are Staff/HR of a company.
+            // If HR can manage ALL companies (like Admin-lite for categories), then we show broad list.
+            // Assuming this route is called with company_id param when a specific company is selected in dropdown.
+            // If company_id is missing, we show "Global" ones.
+            conditions.push("(cat.role = 'hr')"); 
         } else if (role === 'liaison') {
-            conditions.push("(cat.company_id = ? OR cat.role = 'liaison')");
-            params.push(req.user.company_id);
+             // Similar to HR
+             conditions.push("(cat.role = 'liaison')");
         } else {
-            conditions.push("cat.company_id = ?");
+            // Staff
+            conditions.push("cat.company_id = ? AND cat.role IS NULL");
             params.push(req.user.company_id);
         }
     }
@@ -83,11 +102,18 @@ router.post('/categories', authenticateToken, (req, res) => {
         } else if (!company_id) {
              return res.status(400).json({ error: "Company ID is required for general categories" });
         }
-    } else if (userRole === 'hr' || userRole === 'liaison') {
+    } else if (userRole === 'hr') {
+        finalRole = 'hr'; // HR created categories always have role='hr' (visible only to HR/Admin)
+        if (company_id) {
+             finalCompanyId = company_id; // Company-specific HR category
+        } else {
+             finalCompanyId = null; // Global HR category
+        }
+    } else if (userRole === 'liaison') {
+        finalRole = 'liaison';
         if (company_id) {
              finalCompanyId = company_id;
         } else {
-             finalRole = userRole;
              finalCompanyId = null;
         }
     } else {

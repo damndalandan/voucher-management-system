@@ -35,7 +35,9 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const [showAddCheckbook, setShowAddCheckbook] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false); // New Claim Modal
   const [selectedCheckId, setSelectedCheckId] = useState(null);
+  const [receivedByName, setReceivedByName] = useState(''); // New State for Claim
   const [clearDate, setClearDate] = useState(new Date().toISOString().split('T')[0]);
   
   // Edit Date State
@@ -175,23 +177,46 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   };
 
   const handleCheckAction = async (id, action) => {
+      setSelectedCheckId(id);
+
       if (action === 'Cleared') {
-          setSelectedCheckId(id);
           setClearDate(new Date().toISOString().split('T')[0]);
           setShowClearModal(true);
           return;
       }
+      
+      if (action === 'Claimed') {
+          setReceivedByName('');
+          setShowClaimModal(true);
+          return;
+      }
 
       try {
-          // action: 'Claimed', 'Cancelled'
+          // action: 'Cancelled' (Voided handled separately via confirmation)
           await axios.post(`http://localhost:5000/api/checks/${id}/status`, { status: action });
           fetchChecks(account.id);
-          if (action === 'Cleared') { // This part won't be reached for Cleared anymore here, but kept for logic consistency if I move it back
-              fetchTransactions(account.id);
-              if (onUpdate) onUpdate();
-          }
       } catch (err) {
           showAlert('Error updating check status', 'error');
+      }
+  };
+
+  const handleConfirmClaim = async (e) => {
+      e.preventDefault();
+      if (!receivedByName.trim()) {
+          showAlert("Please enter who received the check", "error");
+          return;
+      }
+      try {
+          await axios.post(`http://localhost:5000/api/checks/${selectedCheckId}/status`, { 
+              status: 'Claimed',
+              received_by: receivedByName
+          });
+          setShowClaimModal(false);
+          fetchChecks(account.id);
+          if (onUpdate) onUpdate(); // Refresh parent stats if needed
+          showAlert('Check marked as claimed', 'success');
+      } catch (err) {
+          showAlert('Error marking check as claimed', 'error');
       }
   };
 
@@ -789,6 +814,46 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                 <button type="button" onClick={() => setShowClearModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
                 <button type="submit" className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all transform hover:-translate-y-0.5">
                     Confirm Clear
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showClaimModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl w-96 shadow-2xl transform transition-all scale-100 border border-gray-100">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                        <CheckSquare size={18} />
+                    </div>
+                    Mark as Claimed
+                </h3>
+                <button onClick={() => setShowClaimModal(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-700"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleConfirmClaim} className="space-y-4">
+                <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Received By</label>
+                    <input 
+                        type="text"
+                        placeholder="Enter name of recipient"
+                        className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all"
+                        value={receivedByName}
+                        onChange={e => setReceivedByName(e.target.value)}
+                        autoFocus
+                        required
+                    />
+                    <p className="mt-2 text-xs text-gray-500">
+                        This name will be recorded on the voucher.
+                    </p>
+                </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowClaimModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5">
+                    Confirm
                 </button>
               </div>
             </form>

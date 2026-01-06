@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../database');
 const authenticateToken = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // Get Current User Profile
 router.get('/profile/:id', authenticateToken, (req, res) => {
@@ -11,21 +12,32 @@ router.get('/profile/:id', authenticateToken, (req, res) => {
         return res.status(403).json({ error: "Access denied" });
     }
 
-    db.get("SELECT id, username, role, company_id, full_name FROM users WHERE id = ?", [req.params.id], (err, row) => {
+    db.get("SELECT id, username, role, company_id, full_name, signature_path FROM users WHERE id = ?", [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(row);
     });
 });
 
 // Request Profile Update
-router.post('/profile/request', authenticateToken, (req, res) => {
+router.post('/profile/request', authenticateToken, upload.single('signature'), (req, res) => {
     const { user_id, new_username, new_password, new_full_name } = req.body;
+    const new_signature_path = req.file ? `/uploads/${req.file.filename}` : null;
     
     if (req.user.id != user_id) return res.status(403).json({ error: "Access denied" });
 
-    db.run("INSERT INTO profile_update_requests (user_id, new_username, new_password, new_full_name) VALUES (?, ?, ?, ?)",
-        [user_id, new_username, new_password, new_full_name],
-        function(err) {
+    let sql = "INSERT INTO profile_update_requests (user_id, new_username, new_password, new_full_name";
+    let values = [user_id, new_username, new_password, new_full_name];
+    let placeholders = "?, ?, ?, ?";
+
+    if (new_signature_path) {
+        sql += ", new_signature_path";
+        values.push(new_signature_path);
+        placeholders += ", ?";
+    }
+
+    sql += `) VALUES (${placeholders})`;
+
+    db.run(sql, values, function(err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: "Profile update request submitted for approval" });
         }
@@ -80,6 +92,7 @@ router.post('/profile/requests/:id/:action', authenticateToken, (req, res) => {
                 params.push(hashedPassword); 
             }
             if (reqData.new_full_name) { updates.push("full_name = ?"); params.push(reqData.new_full_name); }
+            if (reqData.new_signature_path) { updates.push("signature_path = ?"); params.push(reqData.new_signature_path); }
             
             if (updates.length > 0) {
                 const sql = "UPDATE users SET " + updates.join(", ") + " WHERE id = ?";

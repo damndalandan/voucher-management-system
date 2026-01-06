@@ -1,9 +1,13 @@
 import axios from 'axios';
 
-// Use relative path in production (Vercel) to avoid Mixed Content / CORS issues
-// In development, strict localhost:5000 is needed unless proxy is set
-const isProduction = import.meta.env.PROD; 
-const baseURL = import.meta.env.VITE_API_URL || (isProduction ? '/api' : 'http://localhost:5000/api');
+// Detect environment based on the browser's current URL
+// If we are on localhost, we assume the backend is at port 5000
+// If we are on Vercel (or any other domain), we use relative path '/api' to use the same domain
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const defaultUrl = isLocalhost ? 'http://localhost:5000/api' : '/api';
+
+// VITE_API_URL can override this if set, otherwise use the detected default
+const baseURL = import.meta.env.VITE_API_URL || defaultUrl;
 
 const api = axios.create({
     baseURL: baseURL

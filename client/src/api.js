@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+// Use relative path in production (Vercel) to avoid Mixed Content / CORS issues
+// In development, strict localhost:5000 is needed unless proxy is set
+const isProduction = import.meta.env.PROD; 
+const baseURL = import.meta.env.VITE_API_URL || (isProduction ? '/api' : 'http://localhost:5000/api');
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    baseURL: baseURL
 });
 
 // Add a request interceptor

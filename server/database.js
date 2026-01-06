@@ -16,6 +16,8 @@ if (isPostgres) {
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false }
     });
+    // Initialize DB immediately for Postgres
+    initDb();
 } else {
     // SQLite Fallback (Development)
     console.log("Using SQLite Database");

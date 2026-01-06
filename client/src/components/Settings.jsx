@@ -128,7 +128,7 @@ const Settings = ({ user, onBack }) => {
         confirmText: 'Import & Restart',
         action: async () => {
             try {
-                await axios.post('http://localhost:5000/api/restore', formData, {
+                await axios.post('/restore', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 showAlert('Database restored. Reloading...', 'success');
@@ -186,7 +186,7 @@ const Settings = ({ user, onBack }) => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/users');
+      const res = await axios.get('/users');
       setUsers(res.data);
     } catch (err) {
       console.error(err);
@@ -195,7 +195,7 @@ const Settings = ({ user, onBack }) => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/companies');
+      const res = await axios.get('/companies');
       setCompanies(res.data);
     } catch (err) {
       console.error(err);
@@ -205,7 +205,7 @@ const Settings = ({ user, onBack }) => {
   const fetchCategories = async () => {
       try {
           // Fetch all categories visible to user
-          const res = await axios.get('http://localhost:5000/api/categories');
+          const res = await axios.get('/categories');
           setCategories(res.data);
       } catch (err) {
           console.error(err);
@@ -214,7 +214,7 @@ const Settings = ({ user, onBack }) => {
 
   const fetchRequests = async () => {
       try {
-          const res = await axios.get('http://localhost:5000/api/company/requests');
+          const res = await axios.get('/company/requests');
           setRequests(res.data);
       } catch (err) {
           console.error(err);
@@ -232,10 +232,10 @@ const Settings = ({ user, onBack }) => {
 
     try {
       if (editingUser) {
-          await axios.put(`http://localhost:5000/api/users/${editingUser.id}`, payload);
+          await axios.put(`/users/${editingUser.id}`, payload);
           showAlert('User updated successfully', 'success');
       } else {
-          await axios.post('http://localhost:5000/api/users', payload);
+          await axios.post('/users', payload);
           showAlert('User created successfully', 'success');
       }
       setShowUserModal(false);
@@ -268,7 +268,7 @@ const Settings = ({ user, onBack }) => {
         confirmText: 'Delete',
         action: async () => {
             try {
-                await axios.delete(`http://localhost:5000/api/users/${id}`);
+                await axios.delete(`/users/${id}`);
                 fetchUsers();
             } catch (err) {
                 showAlert('Error deleting user', 'error');
@@ -280,7 +280,7 @@ const Settings = ({ user, onBack }) => {
   const handleCategorySubmit = async (e) => {
       e.preventDefault();
       try {
-          await axios.post('http://localhost:5000/api/categories', categoryForm);
+          await axios.post('/categories', categoryForm);
           showAlert('Category added successfully', 'success');
           setShowCategoryModal(false);
           setCategoryForm({ name: '', company_id: '', role: '' });
@@ -299,7 +299,7 @@ const Settings = ({ user, onBack }) => {
           confirmText: 'Delete',
           action: async () => {
               try {
-                  await axios.delete(`http://localhost:5000/api/categories/${id}`);
+                  await axios.delete(`/categories/${id}`);
                   fetchCategories();
               } catch (err) {
                   showAlert('Error deleting category', 'error');
@@ -311,7 +311,7 @@ const Settings = ({ user, onBack }) => {
   const handleRequestSubmit = async (e) => {
       e.preventDefault();
       try {
-          await axios.post('http://localhost:5000/api/company/request', {
+          await axios.post('/company/request', {
               company_id: user.company_id,
               requested_by: user.id,
               ...profileForm
@@ -324,7 +324,7 @@ const Settings = ({ user, onBack }) => {
 
   const handleRequestAction = async (id, action) => {
       try {
-          await axios.post(`http://localhost:5000/api/company/requests/${id}/${action}`);
+          await axios.post(`/company/requests/${id}/${action}`);
           fetchRequests();
           fetchCompanies(); // Refresh company data if approved
       } catch (err) {
@@ -333,7 +333,7 @@ const Settings = ({ user, onBack }) => {
   };
 
   const handleBackup = () => {
-    window.open('http://localhost:5000/api/backup', '_blank');
+    window.open('/backup', '_blank');
   };
 
   const handleReset = async () => {
@@ -345,7 +345,7 @@ const Settings = ({ user, onBack }) => {
         confirmText: 'Reset System',
         action: async () => {
             try {
-                await axios.post('http://localhost:5000/api/reset');
+                await axios.post('/reset');
                 showAlert('System reset successfully', 'success');
             } catch (err) {
                 showAlert('Error resetting system', 'error');

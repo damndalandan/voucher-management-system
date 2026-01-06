@@ -363,7 +363,7 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
                                 </span>
                             </div>
                             <a 
-                                href={`http://localhost:5000${voucher.attachment_path}`} 
+                                href={`${voucher.attachment_path}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 hover:underline"
@@ -387,7 +387,7 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
                                     </span>
                                 </div>
                                 <a 
-                                    href={`http://localhost:5000${path}`} 
+                                    href={`${path}`} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 hover:underline"
@@ -668,7 +668,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks 
                             return paths.map((path, index) => {
                                 const name = names[index] || path.split('/').pop();
                                 const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
-                                const fileUrl = `http://localhost:5000${path}`;
+                                const fileUrl = `${path}`;
                                 
                                 return (
                                     <div key={index} className="bg-gray-50 rounded-xl border border-gray-200 p-3 flex flex-col items-center group hover:border-blue-300 transition-colors">
@@ -1125,7 +1125,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchUrgentVouchers = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/vouchers/urgent?sort=${urgentSort}`);
+      const res = await axios.get(`/vouchers/urgent?sort=${urgentSort}`);
       setUrgentVouchers(res.data);
     } catch (err) {
       console.error("Error fetching urgent vouchers", err);
@@ -1135,7 +1135,7 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchCategories = async () => {
     try {
       const companyId = user.company_id || selectedCategoryCompany;
-      const res = await axios.get(`http://localhost:5000/api/categories?company_id=${companyId || ''}`);
+      const res = await axios.get(`/categories?company_id=${companyId || ''}`);
       setCategories(res.data || []);
     } catch (err) {
       console.error("Error fetching categories", err);
@@ -1154,7 +1154,7 @@ const Dashboard = ({ user, onLogout }) => {
           return;
       }
       
-      await axios.post('http://localhost:5000/api/categories', { 
+      await axios.post('/categories', { 
           name: newCategory,
           company_id: companyId || null // Send null if empty string
       });
@@ -1168,7 +1168,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleAddCompany = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/companies', newCompanyForm);
+      await axios.post('/companies', newCompanyForm);
       setNewCompanyForm({ name: '', prefix: '', address: '', contact: '' });
       fetchCompanies();
       showAlert('Company added successfully', 'success');
@@ -1185,7 +1185,7 @@ const Dashboard = ({ user, onLogout }) => {
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
     try {
-      await axios.delete(`http://localhost:5000/api/categories/${categoryToDelete.id}`);
+      await axios.delete(`/categories/${categoryToDelete.id}`);
       fetchCategories();
       setDeleteCategoryModalOpen(false);
       setCategoryToDelete(null);
@@ -1203,7 +1203,7 @@ const Dashboard = ({ user, onLogout }) => {
   const confirmDeleteCompany = async () => {
     if (!companyToDelete || !adminPassword) return;
     try {
-      await axios.delete(`http://localhost:5000/api/companies/${companyToDelete.id}`, {
+      await axios.delete(`/companies/${companyToDelete.id}`, {
         data: { 
             password: adminPassword,
             admin_id: user.id 
@@ -1223,7 +1223,7 @@ const Dashboard = ({ user, onLogout }) => {
     setIsLoadingProfile(true);
     setProfileError(null);
     try {
-        const res = await axios.get(`http://localhost:5000/api/profile/${user.id}`);
+        const res = await axios.get(`/profile/${user.id}`);
         if (res.data) {
             setProfileData(res.data);
             setProfileForm({ 
@@ -1244,7 +1244,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchProfileRequests = async () => {
     try {
-        const res = await axios.get('http://localhost:5000/api/profile/requests/pending');
+        const res = await axios.get('/profile/requests/pending');
         setProfileRequests(res.data || []);
     } catch (err) {
         console.error(err);
@@ -1261,7 +1261,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/users');
+      const res = await axios.get('/users');
       setUsers(res.data || []);
     } catch (err) {
       console.error(err);
@@ -1272,7 +1272,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/users', userForm);
+      await axios.post('/users', userForm);
       showAlert('User created successfully', 'success');
       setShowUserModal(false);
       setUserForm({ username: '', password: '', role: 'staff', company_id: '' });
@@ -1290,7 +1290,7 @@ const Dashboard = ({ user, onLogout }) => {
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
     try {
-      await axios.delete(`http://localhost:5000/api/users/${userToDelete.id}`);
+      await axios.delete(`/users/${userToDelete.id}`);
       fetchUsers();
       setDeleteUserModalOpen(false);
       setUserToDelete(null);
@@ -1305,7 +1305,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleBackup = () => {
-    window.open('http://localhost:5000/api/backup', '_blank');
+    window.open('/backup', '_blank');
   };
 
   const handleImportClick = () => {
@@ -1353,7 +1353,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmReset = async () => {
     try {
-      await axios.post('http://localhost:5000/api/reset');
+      await axios.post('/reset');
       setResetModalOpen(false);
       showAlert('System reset successfully', 'success');
       fetchStats();
@@ -1373,7 +1373,7 @@ const Dashboard = ({ user, onLogout }) => {
         if (signatureFile) formData.append('signature', signatureFile);
 
         if (user.role === 'admin') {
-            await axios.put(`http://localhost:5000/api/users/${user.id}`, formData, {
+            await axios.put(`/users/${user.id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             showAlert('Profile updated successfully.', 'success');
@@ -1393,7 +1393,7 @@ const Dashboard = ({ user, onLogout }) => {
             requestData.append('new_full_name', profileForm.full_name);
             if (signatureFile) requestData.append('signature', signatureFile);
 
-            await axios.post('http://localhost:5000/api/profile/request', requestData, {
+            await axios.post('/profile/request', requestData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             showAlert('Profile update request submitted for Admin approval.', 'success');
@@ -1408,7 +1408,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleRequestAction = async (id, action) => {
       try {
-          await axios.post(`http://localhost:5000/api/profile/requests/${id}/${action}`);
+          await axios.post(`/profile/requests/${id}/${action}`);
           fetchProfileRequests();
           showAlert(`Request ${action}ed`, 'success');
       } catch (err) {
@@ -1420,7 +1420,7 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchVouchers = async () => {
     try {
       const effectiveCompanyId = selectedIssuanceCompany || user.company_id || '';
-      let url = `http://localhost:5000/api/vouchers?company_id=${effectiveCompanyId}&role=${user.role}`;
+      let url = `/vouchers?company_id=${effectiveCompanyId}&role=${user.role}`;
       if (filterType !== 'all' && filterValue) {
         url += `&filter_type=${filterType}&filter_value=${filterValue}`;
       }
@@ -1439,7 +1439,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/stats?company_id=${user.company_id || ''}&role=${user.role}`);
+      const res = await axios.get(`/stats?company_id=${user.company_id || ''}&role=${user.role}`);
       setStats(res.data);
     } catch (err) {
       console.error("Error fetching stats", err);
@@ -1448,7 +1448,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchBanks = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/banks?company_id=${user.company_id || ''}`);
+      const res = await axios.get(`/banks?company_id=${user.company_id || ''}`);
       setBanks(res.data || []);
     } catch (err) {
       console.error("Error fetching banks", err);
@@ -1458,7 +1458,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/companies');
+      const res = await axios.get('/companies');
       setCompanies(res.data || []);
     } catch (err) {
       console.error("Error fetching companies", err);
@@ -1468,7 +1468,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleAddAccount = async (formData) => {
     try {
-      await axios.post('http://localhost:5000/api/banks', { ...formData, company_id: user.company_id || formData.company_id });
+      await axios.post('/banks', { ...formData, company_id: user.company_id || formData.company_id });
       fetchBanks();
       setAddBankModalOpen(false);
       showAlert('Bank account added successfully', 'success');
@@ -1495,7 +1495,7 @@ const Dashboard = ({ user, onLogout }) => {
       const isLiaison = user.role === 'liaison';
       const targetStatus = isLiaison ? 'Pending Admin' : 'Issued';
 
-      await axios.put(`http://localhost:5000/api/vouchers/${voucherToApprove.id}/status`, { 
+      await axios.put(`/vouchers/${voucherToApprove.id}/status`, { 
         status: targetStatus,
         ...extraData
       });
@@ -1590,7 +1590,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const submitVoidRequest = async (reason) => {
     try {
-      await axios.put(`http://localhost:5000/api/vouchers/${voucherToVoid}/status`, { 
+      await axios.put(`/vouchers/${voucherToVoid}/status`, { 
           status: 'Void Pending Approval',
           void_reason: reason
       });
@@ -1614,7 +1614,7 @@ const Dashboard = ({ user, onLogout }) => {
     
     try {
         const status = approved ? 'Voided' : 'Issued';
-        await axios.put(`http://localhost:5000/api/vouchers/${voidReviewVoucher.id}/status`, { status });
+        await axios.put(`/vouchers/${voidReviewVoucher.id}/status`, { status });
         
         fetchVouchers();
         fetchStats();
@@ -1641,7 +1641,7 @@ const Dashboard = ({ user, onLogout }) => {
   const confirmCancelVoucher = async () => {
     if (!voucherToCancel) return;
     try {
-      await axios.put(`http://localhost:5000/api/vouchers/${voucherToCancel}`, { status: 'Cancelled' });
+      await axios.put(`/vouchers/${voucherToCancel}`, { status: 'Cancelled' });
       fetchVouchers();
       fetchStats();
       setCancelVoucherModalOpen(false);
@@ -1660,7 +1660,7 @@ const Dashboard = ({ user, onLogout }) => {
   const confirmForceDelete = async () => {
       if (!voucherToForceDelete) return;
       try {
-          await axios.delete(`http://localhost:5000/api/vouchers/${voucherToForceDelete.id}`);
+          await axios.delete(`/vouchers/${voucherToForceDelete.id}`);
           fetchVouchers();
           fetchStats();
           setForceDeleteModalOpen(false);
@@ -2685,7 +2685,7 @@ const Dashboard = ({ user, onLogout }) => {
                          {profileData.signature_path && !signatureFile && (
                             <div className="mb-2">
                                 <p className="text-xs text-gray-500 mb-1">Current Signature:</p>
-                                <img src={`http://localhost:5000${profileData.signature_path}`} alt="Signature" className="h-16 object-contain border border-gray-200 rounded p-1 bg-white" />
+                                <img src={`${profileData.signature_path}`} alt="Signature" className="h-16 object-contain border border-gray-200 rounded p-1 bg-white" />
                             </div>
                         )}
                         <input 
@@ -2736,7 +2736,7 @@ const Dashboard = ({ user, onLogout }) => {
                         <div className="mt-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">E-Signature</label>
                             <img 
-                                src={`http://localhost:5000${profileData.signature_path}`} 
+                                src={`${profileData.signature_path}`} 
                                 alt="Your Signature" 
                                 className="h-20 object-contain"
                             />

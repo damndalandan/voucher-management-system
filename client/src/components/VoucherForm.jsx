@@ -92,7 +92,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
   const fetchCompanies = async () => {
       try {
-          const res = await axios.get('http://localhost:5000/api/companies');
+          const res = await axios.get('/companies');
           setCompanies(res.data);
           // If creating new and no company selected yet, select first one
           if (!initialData && !formData.company_id && res.data.length > 0) {
@@ -108,7 +108,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
       const companyIdToUse = formData.company_id || user.company_id;
       if (!companyIdToUse) return;
 
-      const res = await axios.get(`http://localhost:5000/api/categories?company_id=${companyIdToUse}`);
+      const res = await axios.get(`/categories?company_id=${companyIdToUse}`);
       setCategories(res.data);
       // Set default category if not set and we have categories
       // Only if we are not editing an existing voucher (initialData is null) OR if the current category is not in the new list
@@ -122,7 +122,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
   const fetchBanks = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/banks?company_id=${user.company_id || ''}`);
+      const res = await axios.get(`/banks?company_id=${user.company_id || ''}`);
       setBanks(res.data);
     } catch (err) {
       console.error("Error fetching banks", err);
@@ -138,7 +138,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
       if (bank) {
         setLoadingCheckNo(true);
         try {
-          const res = await axios.get(`http://localhost:5000/api/banks/${bank.id}/checkbooks`);
+          const res = await axios.get(`/banks/${bank.id}/checkbooks`);
           const activeCheckbook = res.data.find(cb => cb.status === 'Active');
           if (activeCheckbook) {
             setFormData(prev => ({ ...prev, check_no: String(activeCheckbook.next_check_no || '') }));
@@ -253,12 +253,12 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
             data.append('removed_attachments', JSON.stringify(removedAttachments));
         }
 
-        await axios.put(`http://localhost:5000/api/vouchers/${initialData.id}`, data, {
+        await axios.put(`/vouchers/${initialData.id}`, data, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
         // Create new voucher
-        await axios.post('http://localhost:5000/api/vouchers', data, {
+        await axios.post('/vouchers', data, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
@@ -358,7 +358,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                             </span>
                             <div className="grid grid-cols-2 gap-2">
                                 {existingAttachments.map(att => (
-                                    <a key={att.id} href={`http://localhost:5000${att.path}`} target="_blank" rel="noopener noreferrer" 
+                                    <a key={att.id} href={`${att.path}`} target="_blank" rel="noopener noreferrer" 
                                     className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 transition-all group">
                                         <div className="bg-white p-1 rounded border border-gray-200 text-blue-500">
                                             <FileText size={12} />
@@ -689,7 +689,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                         <div className="mb-3 space-y-2">
                             {existingAttachments.map(att => (
                                 <div key={att.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-gray-200">
-                                    <a href={`http://localhost:5000${att.path}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate max-w-[80%]">
+                                    <a href={`${att.path}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate max-w-[80%]">
                                         {att.name}
                                     </a>
                                     <button 

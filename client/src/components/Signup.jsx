@@ -20,7 +20,7 @@ const Signup = () => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/public/companies');
+      const res = await axios.get('/public/companies');
       setCompanies(res.data);
     } catch (err) {
       console.error("Failed to fetch companies", err);
@@ -34,7 +34,7 @@ const Signup = () => {
     setSuccess('');
 
     try {
-      await axios.post('http://localhost:5000/api/signup', {
+      await axios.post('/signup', {
         username,
         password,
         role,

@@ -9,7 +9,7 @@ const VoucherHistory = ({ voucher, onClose }) => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/vouchers/${voucher.id}/history`);
+        const res = await axios.get(`/vouchers/${voucher.id}/history`);
         setHistory(res.data);
       } catch (err) {
         console.error("Error fetching history", err);

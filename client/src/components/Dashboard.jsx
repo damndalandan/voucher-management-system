@@ -989,11 +989,20 @@ const AlertModal = ({ isOpen, onClose, title, message, type }) => {
 
 const Dashboard = ({ user, onLogout }) => {
   // View State
-  const [activeView, setActiveView] = useState('dashboard'); // dashboard, issuances, settings, bank-{id}
+  const [activeView, setActiveView] = useState(() => localStorage.getItem('dashboard_active_view') || 'dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [banksExpanded, setBanksExpanded] = useState(true);
   const [issuancesExpanded, setIssuancesExpanded] = useState(true);
-  const [settingsTab, setSettingsTab] = useState('profile');
+  const [settingsTab, setSettingsTab] = useState(() => localStorage.getItem('dashboard_settings_tab') || 'profile');
+
+  // Persistence Effects
+  useEffect(() => {
+      localStorage.setItem('dashboard_active_view', activeView);
+  }, [activeView]);
+
+  useEffect(() => {
+      localStorage.setItem('dashboard_settings_tab', settingsTab);
+  }, [settingsTab]);
 
   // Data State
   const [vouchers, setVouchers] = useState([]);
@@ -1099,8 +1108,19 @@ const Dashboard = ({ user, onLogout }) => {
   const [signatureFile, setSignatureFile] = useState(null);
   const [newCategory, setNewCategory] = useState('');
   const [selectedCategoryCompany, setSelectedCategoryCompany] = useState('');
-  const [selectedIssuanceCompany, setSelectedIssuanceCompany] = useState(null);
+  const [selectedIssuanceCompany, setSelectedIssuanceCompany] = useState(() => {
+    const saved = localStorage.getItem('dashboard_selected_company');
+    return saved ? parseInt(saved) : null;
+  });
   const [newCompanyForm, setNewCompanyForm] = useState({ name: '', prefix: '', address: '', contact: '' });
+
+  useEffect(() => {
+      if (selectedIssuanceCompany) {
+          localStorage.setItem('dashboard_selected_company', selectedIssuanceCompany);
+      } else {
+          localStorage.removeItem('dashboard_selected_company');
+      }
+  }, [selectedIssuanceCompany]);
 
   // User Management State
   const [users, setUsers] = useState([]);

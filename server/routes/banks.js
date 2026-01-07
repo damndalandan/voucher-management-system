@@ -140,11 +140,13 @@ router.post('/banks/:id/deposit', authenticateToken, (req, res) => {
         
         let newBalance = row.current_balance + parseFloat(safeAmount);
         newBalance = Math.round(newBalance * 100) / 100;
+        
+        const safeAmountFloat = parseFloat(safeAmount);
 
         db.serialize(() => {
             db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, bank_account_id]);
             db.run("INSERT INTO bank_transactions (bank_account_id, type, category, amount, description, running_balance) VALUES (?, 'Deposit', 'Sales', ?, ?, ?)",
-                [bank_account_id, safeAmount, description, newBalance]);
+                [bank_account_id, safeAmountFloat, description, newBalance]);
         });
         res.json({ message: "Deposit recorded", new_balance: newBalance });
     });

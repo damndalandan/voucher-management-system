@@ -7,6 +7,7 @@ const fs = require('fs');
 const { resetDatabase, closeDatabase } = require('./database');
 const syncData = require('./sync');
 const migrateSQLiteToPostgres = require('./migrate');
+const { backupPostgresToSQLite } = require('./backup_service');
 const upload = require('./middleware/upload');
 
 const authRoutes = require('./routes/auth');
@@ -49,9 +50,12 @@ app.use('/api', categoryRoutes);
 
 // Database Management Routes
 app.get('/api/backup', (req, res) => {
+    // Check if using Postgres
     if (process.env.DATABASE_URL) {
-         return res.status(501).json({ error: "Backup not supported for PostgreSQL via API. Use PG tools." });
+         return backupPostgresToSQLite(res);
     }
+    
+    // Fallback for local SQLite
     const dbPath = path.resolve(__dirname, 'vouchers.db');
     if (fs.existsSync(dbPath)) {
         res.download(dbPath, 'vouchers_backup.db');

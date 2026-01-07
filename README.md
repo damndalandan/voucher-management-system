@@ -41,17 +41,6 @@ A multi-tenant web-based system for managing encashment/check vouchers for 4 sis
    ```
    The application will open at `http://localhost:5173` (or similar).
 
-## Login Credentials (Demo)
-
-| Role | Username | Password | Company |
-|------|----------|----------|---------|
-| **Admin** | `admin` | `admin123` | All |
-| **Liaison** | `liaison` | `liaison123` | All |
-| **Staff** | `peachtree_staff` | `user123` | Peachtree Lodge |
-| **Staff** | `valrustri_staff` | `user123` | Valrustri Realty |
-| **Staff** | `busybee_staff` | `user123` | Busy Bee Hardware |
-| **Staff** | `capahi_staff` | `user123` | R. Capahi and Sons |
-
 ## Usage
 1. Log in with a staff account to create vouchers for that specific company.
 2. Click "Create Voucher" to add a new transaction.

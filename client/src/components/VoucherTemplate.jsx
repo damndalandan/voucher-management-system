@@ -2,173 +2,154 @@ import React, { useEffect, useState } from 'react';
 
 export const VoucherCopy = ({ data, title, settings }) => {
   return (
-    <div className="border-2 border-gray-900 p-8 h-[140mm] relative text-sm bg-white font-sans mx-4">
-      <div className="absolute top-6 right-6 text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] border border-gray-300 px-3 py-1 rounded-full">{title}</div>
+    <div className="h-[140mm] relative text-sm font-sans mx-4 flex flex-col pt-4">
+      {/* Title Tag */}
+      <div className="absolute top-0 right-0 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] border border-gray-300 px-3 py-1 rounded-sm bg-gray-50/50">
+        {title}
+      </div>
       
       {/* Header */}
-      <div className="flex justify-between items-start mb-6 border-b-2 border-gray-900 pb-4">
-        <div className="flex items-center gap-5">
+      <div className="flex justify-between items-start mb-4 border-b-2 border-gray-800 pb-3">
+        <div className="flex items-center gap-4">
           {settings.logoUrl && (
-            <img src={settings.logoUrl} alt="Logo" className="h-16 w-auto object-contain grayscale contrast-125" />
+            <div className="h-14 w-14 flex items-center justify-center overflow-hidden">
+                <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-contain grayscale" />
+            </div>
           )}
           <div>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-gray-900 leading-none">
+            <h1 className="text-xl font-black uppercase tracking-tight text-gray-900 leading-none">
               {settings.headerTitle || data.company_name}
             </h1>
             {(settings.addressLine1 || settings.addressLine2) ? (
-              <div className="text-gray-500 text-xs mt-1.5 font-medium tracking-wide">
+              <div className="text-gray-600 text-[10px] mt-1 font-medium tracking-wide leading-tight">
                 {settings.addressLine1 && <div>{settings.addressLine1}</div>}
                 {settings.addressLine2 && <div>{settings.addressLine2}</div>}
               </div>
             ) : (
-              <p className="text-gray-500 text-xs mt-1.5 font-medium tracking-wide uppercase">Official Payment Voucher</p>
+              <div className="text-gray-500 text-[10px] mt-1 font-bold tracking-widest uppercase">Check Disbursement Voucher</div>
             )}
           </div>
         </div>
-        <div className="text-right pt-2">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Voucher No.</div>
-          <div className="text-xl font-mono font-bold text-gray-900 border-2 border-gray-900 px-4 py-1 rounded-md inline-block bg-gray-50">
+        <div className="text-right">
+          <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Voucher No.</div>
+          <div className="text-lg font-mono font-bold text-gray-900 border border-gray-800 px-3 py-0.5 rounded-sm bg-gray-50 inline-block min-w-[100px] text-center">
             {data.voucher_no}
           </div>
         </div>
       </div>
 
       {/* Main Info Grid */}
-      <div className="grid grid-cols-12 gap-x-6 gap-y-4 mb-6">
+      <div className="grid grid-cols-12 gap-4 mb-4">
         {/* Date */}
-        <div className="col-span-4">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</span>
-            <div className="border-b border-gray-300 py-1 font-semibold text-gray-900 text-base">{data.date}</div>
+        <div className="col-span-3">
+          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Date</span>
+          <div className="border-b border-gray-300 py-1 font-semibold text-gray-900 text-sm">
+             {data.date ? new Date(data.date).toLocaleDateString() : '-'}
           </div>
         </div>
         
-        {/* Amount Box */}
-        <div className="col-span-8 flex justify-end items-end">
-          <div className="bg-gray-50 border border-gray-200 p-2 rounded-lg flex items-center gap-3 min-w-[200px] shadow-sm">
-            <span className="font-bold text-gray-400 text-xs uppercase tracking-wider">Amount</span>
-            <span className="text-xl font-bold text-gray-900 font-mono ml-auto">
-              <span className="text-base mr-1">₱</span>
-              {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(data.amount)}
-            </span>
-          </div>
-        </div>
-
-        {/* Payee */}
-        <div className="col-span-12">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pay To</span>
-            <div className="border-b border-gray-300 py-1 text-lg font-bold text-gray-900">{data.payee}</div>
+        {/* Payee (Moves here for better flow) */}
+        <div className="col-span-9">
+          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Pay To</span>
+          <div className="border-b border-gray-300 py-1 font-bold text-gray-900 text-sm truncate uppercase">
+            {data.payee}
           </div>
         </div>
 
         {/* Amount in Words */}
-        <div className="col-span-12">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">The Sum of</span>
-            <div className="border-b border-gray-300 py-1 italic text-sm font-medium text-gray-700 bg-gray-50/50 px-2 rounded-t">
-              {data.amount_in_words}
-            </div>
+        <div className="col-span-9">
+          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block mb-1">The Sum of</span>
+          <div className="border-b border-gray-300 py-1 italic text-xs font-semibold text-gray-700 bg-gray-50/30 px-2 rounded-t min-h-[24px]">
+             {data.amount_in_words}
           </div>
+        </div>
+
+        {/* Amount Box */}
+        <div className="col-span-3">
+             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Amount</span>
+             <div className="bg-gray-100 border border-gray-300 px-2 py-1 rounded-sm text-right">
+                <span className="text-sm font-bold text-gray-900 font-mono">
+                    <span className="text-xs mr-1 text-gray-500">₱</span>
+                    {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data.amount)}
+                </span>
+             </div>
         </div>
       </div>
 
-      {/* Particulars */}
-      <div className="mb-6">
-        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Particulars / Description</div>
-        <div className="border border-gray-200 h-32 p-3 rounded-lg bg-white text-gray-800 whitespace-pre-wrap text-sm relative overflow-hidden">
-          {/* Ruled Lines Background */}
-          <div className="absolute inset-0 pointer-events-none opacity-20" style={{
-            backgroundImage: 'linear-gradient(transparent 23px, #000 24px)',
-            backgroundSize: '100% 24px',
-            marginTop: '4px'
-          }}></div>
-          <div className="relative z-10 leading-[24px]">{data.description}</div>
+      {/* Particulars Section */}
+      <div className="flex-grow flex flex-col mb-4">
+        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1">Particulars</div>
+        <div className="border border-gray-300 flex-grow rounded-sm relative overflow-hidden bg-white p-2">
+           {/* Lines */}
+           <div className="absolute inset-0 z-0 pointer-events-none" style={{
+               background: 'linear-gradient(transparent 95%, #e5e7eb 95%)',
+               backgroundSize: '100% 20px',
+               marginTop: '22px'
+           }}></div>
+           <p className="relative z-10 text-xs text-gray-800 whitespace-pre-wrap leading-[20px] font-medium pl-1">
+               {data.description}
+           </p>
         </div>
       </div>
 
-      {/* Payment Details */}
-      <div className="flex gap-6 mb-6 text-xs">
-        <div className="border border-gray-200 p-3 rounded-lg w-1/2 bg-gray-50/50">
-          <div className="font-bold mb-2 text-gray-900 uppercase text-[10px] tracking-wider">Payment Mode</div>
-          <div className="flex gap-6">
-            <label className="flex items-center cursor-default group">
-              <div className={`w-4 h-4 border border-gray-400 rounded-full mr-2 flex items-center justify-center transition-colors ${data.payment_type === 'Encashment' ? 'border-gray-900 bg-gray-900' : 'bg-white'}`}>
-                {data.payment_type === 'Encashment' && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-              </div>
-              <span className="font-medium text-gray-700">Encashment</span>
-            </label>
-            <label className="flex items-center cursor-default group">
-              <div className={`w-4 h-4 border border-gray-400 rounded-full mr-2 flex items-center justify-center transition-colors ${data.payment_type === 'Check' ? 'border-gray-900 bg-gray-900' : 'bg-white'}`}>
-                {data.payment_type === 'Check' && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-              </div>
-              <span className="font-medium text-gray-700">Check</span>
-            </label>
-          </div>
-        </div>
-        
-        {(data.payment_type === 'Check' || data.payment_type === 'Encashment') && (
-          <div className="border border-gray-200 p-3 rounded-lg w-1/2 bg-gray-50/50">
-            <div className="font-bold mb-2 text-gray-900 uppercase text-[10px] tracking-wider">Check Details</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-gray-400 block text-[9px] uppercase tracking-wide">Bank Name</span>
-                <span className="font-semibold text-gray-900">{data.bank_name}</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[9px] uppercase tracking-wide">Check No.</span>
-                <span className="font-mono font-semibold text-gray-900">{data.check_no}</span>
-              </div>
-              {data.check_date && (
-                <div className="col-span-2 border-t border-gray-200 pt-2 mt-1">
-                  <span className="text-gray-400 block text-[9px] uppercase tracking-wide">Check Date (PDC)</span>
-                  <span className="font-semibold text-gray-900">{data.check_date}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Bank & Check Details (Compact) */}
+      <div className="flex border border-gray-200 rounded-sm overflow-hidden mb-4 text-xs h-16">
+         {/* Payment Type */}
+         <div className="w-24 bg-gray-50 border-r border-gray-200 p-2 flex flex-col justify-center items-center">
+            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1">Type</span>
+            <span className="font-bold text-gray-800 uppercase">{data.payment_type}</span>
+         </div>
+         
+         {/* Bank Info */}
+         <div className="flex-1 p-2 flex flex-col justify-center border-r border-gray-200">
+             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Bank</span>
+             <span className="font-semibold text-gray-900 truncate">{data.bank_name || 'N/A'}</span>
+         </div>
 
-      {/* Signatures */}
-      <div className="flex justify-between mt-auto pt-4 text-center text-xs gap-4">
-        {/* Prepared By */}
-        <div className="w-1/4">
-          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
-             <span className="absolute bottom-1 left-0 w-full">{data.created_by_name || data.created_by_user || ''}</span>
-          </div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.preparedByLabel || 'Prepared By'}</div>
-        </div>
+         {/* Check No */}
+         <div className="w-32 p-2 flex flex-col justify-center border-r border-gray-200">
+             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Check No.</span>
+             <span className="font-mono font-bold text-gray-900">{data.check_no || 'N/A'}</span>
+         </div>
 
-        {/* Certified By */}
-        <div className="w-1/4">
-          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
-              <span className="absolute bottom-1 left-0 w-full">{data.certified_by || ''}</span>
-          </div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">Certified By</div>
-        </div>
-
-        {/* Approved By */}
-        <div className="w-1/4">
-          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
-             <span className="absolute bottom-1 left-0 w-full">
-               {data.approved_by || (data.approval_attachment ? 'See Attachment' : '')}
+         {/* Check Date (PDC/Issued) */}
+         <div className="w-28 p-2 flex flex-col justify-center">
+             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Check Date</span>
+             <span className="font-semibold text-gray-900">
+                 {data.check_date ? new Date(data.check_date).toLocaleDateString() : (data.check_issued_date ? new Date(data.check_issued_date).toLocaleDateString() : '-')}
              </span>
-          </div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.approvedByLabel || 'Approved By'}</div>
-        </div>
+         </div>
+      </div>
 
-        {/* Received By */}
-        <div className="w-1/4">
-          <div className="border-b border-gray-900 mb-2 pb-1 font-bold text-gray-900 truncate h-6 relative">
-              <span className="absolute bottom-1 left-0 w-full">{data.received_by || ''}</span>
-          </div>
-          <div className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">{settings.receivedByLabel || 'Received By'}</div>
-          <div className="flex justify-center mt-1 items-center">
-             <span className="text-[8px] text-gray-400 mr-1 uppercase tracking-wide">Date</span>
-             <div className="border-b border-gray-300 w-12"></div>
-          </div>
-        </div>
+      {/* Signatories */}
+      <div className="grid grid-cols-4 gap-4 mt-auto">
+         <div className="text-center">
+             <div className="border-b border-gray-800 h-8 mb-1 relative">
+                 <span className="absolute bottom-0 left-0 w-full text-xs font-bold truncate">{data.created_by_name || data.created_by_user}</span>
+             </div>
+             <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{settings.preparedByLabel || 'Prepared By'}</div>
+         </div>
+         <div className="text-center">
+             <div className="border-b border-gray-800 h-8 mb-1 relative">
+                 <span className="absolute bottom-0 left-0 w-full text-xs font-bold truncate">{data.certified_by}</span>
+             </div>
+             <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{settings.checkedByLabel || 'Certified By'}</div>
+         </div>
+         <div className="text-center">
+             <div className="border-b border-gray-800 h-8 mb-1 relative">
+                 <span className="absolute bottom-0 left-0 w-full text-xs font-bold truncate">
+                    {data.approved_by || (data.approval_attachment ? 'See Attachment' : '')}
+                 </span>
+             </div>
+             <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{settings.approvedByLabel || 'Approved By'}</div>
+         </div>
+         <div className="text-center">
+             <div className="border-b border-gray-800 h-8 mb-1 relative flex items-end justify-center">
+                  <span className="text-xs font-bold truncate">{data.received_by}</span>
+             </div>
+             <div className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">{settings.receivedByLabel || 'Received By'}</div>
+             <div className="text-[8px] text-gray-400 mt-0.5">Signature & Date</div>
+         </div>
       </div>
     </div>
   );
@@ -185,9 +166,8 @@ const VoucherTemplate = React.forwardRef(({ data, settings: propSettings }, ref)
     addressLine1: '',
     addressLine2: '',
     preparedByLabel: 'Prepared By',
-    checkedByLabel: 'Checked By',
+    checkedByLabel: 'Certified By',
     approvedByLabel: 'Approved By',
-    checkIssuedByLabel: 'Check Issued By',
     receivedByLabel: 'Received By'
   });
 
@@ -204,35 +184,43 @@ const VoucherTemplate = React.forwardRef(({ data, settings: propSettings }, ref)
 
   if (!data) return null;
 
+  // Print style setup
+  // We use standard Long Bond (8.5 x 13 in) Approx 215.9mm x 330.2mm
+  // Or A4 (210mm x 297mm). Most vouchers on full paper use two halves.
+  // Standardizing container.
+  
   const containerStyle = {
     paddingTop: `${settings.marginTop}mm`,
     paddingLeft: `${settings.marginLeft}mm`,
     transform: `scale(${settings.scale / 100})`,
     transformOrigin: 'top left',
-    width: '100%'
   };
 
   return (
-    <div ref={ref} className="bg-white w-[216mm] mx-auto h-[330mm] relative" style={containerStyle}>
+    <div ref={ref} className="bg-white w-[8.5in] min-h-[11in] mx-auto relative shadow-2xl printable-area overflow-hidden" style={containerStyle}>
       <style type="text/css" media="print">
-        {`@page { size: 8.5in 13in; margin: 0; }`}
+        {`
+          @page { size: auto; margin: 0; }
+          body { -webkit-print-color-adjust: exact; }
+          .printable-area { box-shadow: none !important; margin: 0 !important; width: 8.5in !important; height: 11in !important; }
+        `}
       </style>
       
-      {/* Top Half - Payee's Copy */}
-      <div className="absolute top-0 left-0 w-full h-1/2 pt-6">
+      {/* Top Half - Payee's Copy (Approx 5.5in height) */}
+      <div className="absolute top-0 left-0 w-full h-[50%] p-8 box-border">
         <VoucherCopy data={data} title="PAYEE'S COPY" settings={settings} />
       </div>
 
-      {/* Cut Line - Exactly at Center */}
-      <div className="absolute top-1/2 left-0 w-full flex items-center justify-center -mt-[1px] z-10">
-          <div className="w-full border-t-2 border-dashed border-gray-300"></div>
-          <span className="absolute bg-white px-3 text-gray-400 text-[10px] font-bold tracking-widest uppercase flex items-center gap-2">
-            <span className="text-lg leading-none">✂</span> Cut Here
+      {/* Cut Line */}
+      <div className="absolute top-1/2 left-0 w-full flex items-center justify-center z-10 -mt-2">
+          <div className="w-full border-t border-dashed border-gray-400 mx-8"></div>
+          <span className="absolute bg-white px-2 text-gray-400 text-[8px] font-bold tracking-widest uppercase flex items-center gap-1">
+            <span>✂</span> Cut Here 
           </span>
       </div>
 
       {/* Bottom Half - File Copy */}
-      <div className="absolute top-1/2 left-0 w-full h-1/2 pt-6">
+      <div className="absolute top-[50%] left-0 w-full h-[50%] p-8 box-border">
         <VoucherCopy data={data} title="FILE COPY" settings={settings} />
       </div>
     </div>
@@ -240,3 +228,4 @@ const VoucherTemplate = React.forwardRef(({ data, settings: propSettings }, ref)
 });
 
 export default VoucherTemplate;
+

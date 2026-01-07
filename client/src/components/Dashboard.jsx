@@ -3248,8 +3248,8 @@ const Dashboard = ({ user, onLogout }) => {
                         <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <Eye size={18} className="text-blue-600" /> Live Preview
                         </h4>
-                        <div className="bg-gray-200 p-8 rounded-xl border border-gray-300 overflow-hidden flex justify-center items-center min-h-[600px]">
-                            <div className="bg-white shadow-2xl transform scale-[0.65] origin-top">
+                        <div className="bg-gray-200 p-8 rounded-xl border border-gray-300 overflow-auto flex justify-center items-start min-h-[600px] custom-scrollbar">
+                            <div className="bg-white shadow-2xl transform scale-[0.65] origin-top mt-4">
                                 <VoucherTemplate 
                                     data={{
                                         voucher_no: 'SAMPLE-00001',

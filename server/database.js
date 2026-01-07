@@ -193,6 +193,12 @@ async function initDb() {
     const AUTO_INCREMENT = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const DATETIME_TYPE = isPostgres ? 'TIMESTAMP' : 'DATETIME';
     const TEXT_TYPE = 'TEXT';
+    // Use NUMERIC for Postgres to ensure exact decimal precision for currency
+    // SQLite REAL is already 8-byte double, but NUMERIC affinity works well too.
+    // However, existing SQLite databases use REAL, so we keep REAL for SQLite to avoid type mismatch confusion,
+    // though SQLite is flexible. 
+    // For Postgres: REAL is float4 (imprecise), DOUBLE PRECISION is float8, NUMERIC is exact.
+    const NUMBER_TYPE = isPostgres ? 'NUMERIC' : 'REAL';
     
     console.log(`Initializing Database Schema (${isPostgres ? 'Postgres' : 'SQLite'})...`);
 
@@ -223,7 +229,7 @@ async function initDb() {
             company_id INTEGER,
             bank_name ${TEXT_TYPE} NOT NULL,
             account_number ${TEXT_TYPE} NOT NULL,
-            current_balance REAL DEFAULT 0,
+            current_balance ${NUMBER_TYPE} DEFAULT 0,
             FOREIGN KEY (company_id) REFERENCES companies(id)
         )`);
 
@@ -269,7 +275,7 @@ async function initDb() {
             date ${TEXT_TYPE} NOT NULL,
             payee ${TEXT_TYPE} NOT NULL,
             description ${TEXT_TYPE},
-            amount REAL NOT NULL,
+            amount ${NUMBER_TYPE} NOT NULL,
             amount_in_words ${TEXT_TYPE},
             payment_type ${TEXT_TYPE} NOT NULL,
             check_no ${TEXT_TYPE},
@@ -330,11 +336,11 @@ async function initDb() {
             voucher_id INTEGER,
             type ${TEXT_TYPE} NOT NULL,
             category ${TEXT_TYPE},
-            amount REAL NOT NULL,
+            amount ${NUMBER_TYPE} NOT NULL,
             description ${TEXT_TYPE},
             check_no ${TEXT_TYPE},
             transaction_date ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
-            running_balance REAL,
+            running_balance ${NUMBER_TYPE},
             FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
             FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
         )`);
@@ -349,7 +355,7 @@ async function initDb() {
             date_cleared ${DATETIME_TYPE},
             payee ${TEXT_TYPE},
             description ${TEXT_TYPE},
-            amount REAL NOT NULL,
+            amount ${NUMBER_TYPE} NOT NULL,
             status ${TEXT_TYPE} DEFAULT 'Issued',
             FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
             FOREIGN KEY (voucher_id) REFERENCES vouchers(id)

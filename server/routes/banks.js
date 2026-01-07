@@ -208,4 +208,26 @@ router.put('/transactions/:id', authenticateToken, (req, res) => {
     });
 });
 
+// Delete Bank Account
+router.delete('/banks/:id', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Access denied" });
+
+    const bankId = req.params.id;
+    
+    db.serialize(() => {
+        // Delete related data first to avoid foreign key constraints
+        // Note: In a production system, you might want to soft-delete or archive instead.
+        db.run("DELETE FROM checks WHERE bank_account_id = ?", [bankId]);
+        db.run("DELETE FROM checkbooks WHERE bank_account_id = ?", [bankId]);
+        db.run("DELETE FROM bank_transactions WHERE bank_account_id = ?", [bankId]);
+        
+        // Delete the account
+        db.run("DELETE FROM bank_accounts WHERE id = ?", [bankId], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) return res.status(404).json({ error: "Bank account not found" });
+            res.json({ message: "Bank account deleted successfully" });
+        });
+    });
+});
+
 module.exports = router;

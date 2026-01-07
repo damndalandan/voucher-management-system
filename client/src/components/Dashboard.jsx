@@ -875,6 +875,55 @@ const DeleteCompanyModal = ({ isOpen, onClose, onConfirm, companyName, password,
   );
 };
 
+const DeleteBankModal = ({ isOpen, onClose, onConfirm, bankName, password, setPassword }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl transform transition-all scale-100 border border-gray-100">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="bg-red-100 p-3 rounded-full shadow-sm">
+            <Trash2 className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800">Delete Bank Account</h3>
+        </div>
+        <p className="text-gray-600 mb-6 text-lg leading-relaxed">
+          Are you sure you want to delete <span className="font-bold text-gray-900">"{bankName}"</span>? 
+          <br/><span className="text-red-600 text-sm font-bold">Warning: This will delete all associated checks and transaction history.</span>
+        </p>
+        
+        <div className="mb-6">
+            <label className="block text-sm font-bold text-gray-700 mb-2">Admin Password Required</label>
+            <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                placeholder="Enter your password"
+                autoFocus
+            />
+        </div>
+
+        <div className="flex justify-end space-x-3">
+          <button 
+            onClick={onClose}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm}
+            disabled={!password}
+            className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={18} />
+            Delete Bank
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AlertModal = ({ isOpen, onClose, title, message, type }) => {
   if (!isOpen) return null;
   
@@ -981,6 +1030,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [fileToImport, setFileToImport] = useState(null);
+  const [deleteBankModalOpen, setDeleteBankModalOpen] = useState(false);
+  const [bankToDelete, setBankToDelete] = useState(null);
 
   const showAlert = (message, type = 'info') => {
     setAlertModal({ 
@@ -1344,6 +1395,31 @@ const Dashboard = ({ user, onLogout }) => {
           msg = error.message ? `Failed to restore database: ${error.message}` : 'Failed to restore database (Unknown error)';
       }
       showAlert(msg, 'error');
+    }
+  };
+
+  const handleDeleteBank = (bank) => {
+    setBankToDelete(bank);
+    setAdminPassword(''); // Reuse adminPassword state which is already defined
+    setDeleteBankModalOpen(true);
+  };
+
+  const confirmDeleteBank = async () => {
+    if (!bankToDelete || !adminPassword) return;
+    try {
+      await axios.delete(`/banks/${bankToDelete.id}`, {
+        data: { 
+            password: adminPassword,
+            admin_id: user.id 
+        }
+      });
+      fetchBanks();
+      setDeleteBankModalOpen(false);
+      setBankToDelete(null);
+      setAdminPassword('');
+      showAlert('Bank account deleted successfully', 'success');
+    } catch (err) {
+      showAlert('Error deleting bank account: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
@@ -1946,6 +2022,18 @@ const Dashboard = ({ user, onLogout }) => {
                                     <p className="text-sm text-gray-500 font-mono mt-1">{bank.account_number}</p>
                                 </div>
                             </div>
+                            {user.role === 'admin' && (
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteBank(bank);
+                                    }}
+                                    className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors z-20 relative"
+                                    title="Delete Bank Account"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
+                            )}
                         </div>
 
                         {/* Metrics Body */}
@@ -3364,6 +3452,19 @@ const Dashboard = ({ user, onLogout }) => {
         }}
         onConfirm={confirmDeleteCompany}
         companyName={companyToDelete?.name}
+        password={adminPassword}
+        setPassword={setAdminPassword}
+      />
+
+      <DeleteBankModal 
+        isOpen={deleteBankModalOpen}
+        onClose={() => {
+            setDeleteBankModalOpen(false);
+            setBankToDelete(null);
+            setAdminPassword('');
+        }}
+        onConfirm={confirmDeleteBank}
+        bankName={bankToDelete?.bank_name}
         password={adminPassword}
         setPassword={setAdminPassword}
       />

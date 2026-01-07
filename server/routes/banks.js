@@ -200,32 +200,41 @@ router.put('/transactions/:id', authenticateToken, (req, res) => {
                         if (err) return res.status(500).json({ error: err.message });
 
                         let runningBalance = 0;
-                        const updateStmt = db.prepare("UPDATE bank_transactions SET running_balance = ? WHERE id = ?");
-
-                        transactions.forEach(t => {
+                        
+                        // Use Promise.all equivalent logic since db.run might be async in Postgres wrapper
+                        // and we want to ensure all updates complete before sending response.
+                        const updatePromises = transactions.map(t => {
                             const amt = parseFloat(t.amount);
 
                             if (t.type === 'Deposit') {
                                 runningBalance += amt;
                             } else {
-                                // Withdrawal, Bounced, etc. deduct from balance
                                 runningBalance -= amt;
                             }
                             
-                            // Ensure raw precision
-                            // runningBalance = Math.round(runningBalance * 100) / 100;
-                            
-                            updateStmt.run(runningBalance, t.id);
+                            // Return a promise for each update
+                            return new Promise((resolve, reject) => {
+                                db.run("UPDATE bank_transactions SET running_balance = ? WHERE id = ?", 
+                                    [runningBalance, t.id], (err) => {
+                                        if (err) reject(err);
+                                        else resolve();
+                                    });
+                            });
                         });
 
-                        updateStmt.finalize(() => {
-                            // 3. Update final account balance
-                            db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", 
-                                [runningBalance, tx.bank_account_id], (err) => {
-                                    if (err) return res.status(500).json({ error: err.message });
-                                    res.json({ message: "Transaction updated and passbook recalculated" });
-                                });
-                        });
+                        Promise.all(updatePromises)
+                            .then(() => {
+                                // 3. Update final account balance
+                                db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", 
+                                    [runningBalance, tx.bank_account_id], (err) => {
+                                        if (err) return res.status(500).json({ error: err.message });
+                                        res.json({ message: "Transaction updated and passbook recalculated" });
+                                    });
+                            })
+                            .catch(err => {
+                                console.error("Error recalculating balances:", err);
+                                res.status(500).json({ error: "Failed to recalculate balances" });
+                            });
                     });
                 });
         });

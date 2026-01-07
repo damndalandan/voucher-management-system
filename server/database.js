@@ -12,8 +12,23 @@ let dbPath;
 
 if (isPostgres) {
     console.log("Using PostgreSQL Database");
+    
+    // Parse the connection string to cleanly handle SSL configuration
+    // This is necessary because connection string parameters can conflict with object config
+    let connectionString = process.env.DATABASE_URL;
+    try {
+        const url = new URL(connectionString);
+        // Remove sslmode from URL params to let the ssl object control the behavior
+        if (url.searchParams.has('sslmode')) {
+            url.searchParams.delete('sslmode');
+        }
+        connectionString = url.toString();
+    } catch (e) {
+        console.warn("Could not parse DATABASE_URL, using original string");
+    }
+
     db = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: connectionString,
         ssl: { 
             rejectUnauthorized: false 
         }

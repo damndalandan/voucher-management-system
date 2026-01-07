@@ -29,7 +29,10 @@ router.post('/banks', authenticateToken, (req, res) => {
 
     let { company_id, bank_name, account_number, initial_balance } = req.body;
     
-    // Ensure initial_balance is a valid number
+    // Ensure initial_balance is a valid number (handle commas)
+    if (typeof initial_balance === 'string') {
+        initial_balance = initial_balance.replace(/,/g, '');
+    }
     initial_balance = parseFloat(initial_balance) || 0;
     initial_balance = Math.round(initial_balance * 100) / 100;
 
@@ -94,7 +97,14 @@ router.post('/banks/:id/transaction', authenticateToken, (req, res) => {
         if (err || !row) return res.status(404).json({ error: "Account not found" });
         
         let newBalance = row.current_balance;
-        const amountFloat = parseFloat(amount);
+        
+        // Handle commas in input
+        let safeAmount = amount;
+        if (typeof safeAmount === 'string') {
+            safeAmount = safeAmount.replace(/,/g, '');
+        }
+
+        const amountFloat = parseFloat(safeAmount);
         if (type === 'Deposit') {
             newBalance += amountFloat;
         } else {
@@ -122,13 +132,19 @@ router.post('/banks/:id/deposit', authenticateToken, (req, res) => {
     const bank_account_id = req.params.id;
     db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [bank_account_id], (err, row) => {
         if (err || !row) return res.status(404).json({ error: "Account not found" });
-        let newBalance = row.current_balance + parseFloat(amount);
+        
+        let safeAmount = amount;
+        if (typeof safeAmount === 'string') {
+            safeAmount = safeAmount.replace(/,/g, '');
+        }
+        
+        let newBalance = row.current_balance + parseFloat(safeAmount);
         newBalance = Math.round(newBalance * 100) / 100;
 
         db.serialize(() => {
             db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, bank_account_id]);
             db.run("INSERT INTO bank_transactions (bank_account_id, type, category, amount, description, running_balance) VALUES (?, 'Deposit', 'Sales', ?, ?, ?)",
-                [bank_account_id, amount, description, newBalance]);
+                [bank_account_id, safeAmount, description, newBalance]);
         });
         res.json({ message: "Deposit recorded", new_balance: newBalance });
     });
@@ -156,7 +172,15 @@ router.put('/transactions/:id', authenticateToken, (req, res) => {
         if (err || !tx) return res.status(404).json({ error: "Transaction not found" });
 
         const newDate = transaction_date || tx.transaction_date;
-        const newAmount = (amount !== undefined && amount !== null && amount !== '') ? parseFloat(amount) : tx.amount;
+        let newAmount = tx.amount;
+        
+        if (amount !== undefined && amount !== null && amount !== '') {
+            let safeAmount = amount;
+            if (typeof safeAmount === 'string') {
+                safeAmount = safeAmount.replace(/,/g, '');
+            }
+            newAmount = parseFloat(safeAmount);
+        }
 
         db.serialize(() => {
             // 1. Update the target transaction first

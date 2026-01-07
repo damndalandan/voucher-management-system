@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const { resetDatabase, closeDatabase } = require('./database');
 const syncData = require('./sync');
+const migrateSQLiteToPostgres = require('./migrate');
 const upload = require('./middleware/upload');
 
 const authRoutes = require('./routes/auth');
@@ -59,27 +60,38 @@ app.get('/api/backup', (req, res) => {
     }
 });
 
-app.post('/api/restore', upload.single('database'), (req, res) => {
-    if (process.env.DATABASE_URL) {
-         return res.status(501).json({ error: "Restore not supported for PostgreSQL via API. Use PG tools." });
-    }
+app.post('/api/restore', upload.single('database'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const restorePath = path.resolve(__dirname, 'restore_pending.db');
-    // If memory storage (Blob token present but falling back to SQLite?), this breaks.
-    // Logic: If on Vercel without PG, we use /tmp.
-    // If DATABASE_URL is set, we don't reach here.
-    // If LOCAL without BLOB token, we strictly use disk storage (see upload.js).
-    // So req.file.path should exist.
-    
     // Safety check
     if (!req.file.path) {
          return res.status(400).json({ error: "File path missing (Upload config error)" });
     }
 
     const uploadedPath = req.file.path;
+
+    // Handle PostgreSQL Migration
+    if (process.env.DATABASE_URL) {
+        try {
+            console.log("Starting SQLite to Postgres migration...");
+            await migrateSQLiteToPostgres(uploadedPath);
+            
+            // Clean up uploaded file
+            if (fs.existsSync(uploadedPath)) fs.unlinkSync(uploadedPath);
+
+            // Respond success
+            return res.json({ message: 'Database migrated to PostgreSQL successfully. Please refresh.' });
+        } catch (e) {
+            console.error("Migration error:", e);
+            if (fs.existsSync(uploadedPath)) fs.unlinkSync(uploadedPath);
+            return res.status(500).json({ error: `Migration failed: ${e.message}` });
+        }
+    }
+
+    // Handle SQLite Restore (Original Logic)
+    const restorePath = path.resolve(__dirname, 'restore_pending.db');
 
     try {
         // Move uploaded file to pending restore location

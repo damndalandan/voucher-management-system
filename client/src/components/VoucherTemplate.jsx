@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 export const VoucherCopy = ({ data, title, settings }) => {
   return (
-    <div className="h-[140mm] relative text-sm font-sans mx-4 flex flex-col pt-4">
+    <div className="h-full relative text-sm font-sans mx-4 flex flex-col pt-4">
       {/* Title Tag */}
       <div className="absolute top-0 right-0 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] border border-gray-300 px-3 py-1 rounded-sm bg-gray-50/50">
         {title}
@@ -197,12 +197,12 @@ const VoucherTemplate = React.forwardRef(({ data, settings: propSettings }, ref)
   };
 
   return (
-    <div ref={ref} className="bg-white w-[8.5in] min-h-[11in] mx-auto relative shadow-2xl printable-area overflow-hidden" style={containerStyle}>
+    <div ref={ref} className="bg-white w-[8.5in] min-h-[13in] mx-auto relative shadow-2xl printable-area overflow-hidden" style={containerStyle}>
       <style type="text/css" media="print">
         {`
-          @page { size: auto; margin: 0; }
+          @page { size: 8.5in 13in; margin: 0; }
           body { -webkit-print-color-adjust: exact; }
-          .printable-area { box-shadow: none !important; margin: 0 !important; width: 8.5in !important; height: 11in !important; }
+          .printable-area { box-shadow: none !important; margin: 0 !important; width: 8.5in !important; height: 13in !important; }
         `}
       </style>
       

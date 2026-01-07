@@ -98,7 +98,7 @@ router.post('/banks/:id/transaction', authenticateToken, (req, res) => {
     db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [bank_account_id], (err, row) => {
         if (err || !row) return res.status(404).json({ error: "Account not found" });
         
-        let newBalance = row.current_balance;
+        let newBalance = parseFloat(row.current_balance);
         
         // Handle commas in input
         let safeAmount = amount;
@@ -140,7 +140,9 @@ router.post('/banks/:id/deposit', authenticateToken, (req, res) => {
             safeAmount = safeAmount.replace(/,/g, '');
         }
         
-        let newBalance = row.current_balance + parseFloat(safeAmount);
+        // Ensure current_balance is treated as a number
+        let currentBalance = parseFloat(row.current_balance);
+        let newBalance = currentBalance + parseFloat(safeAmount);
         // newBalance = Math.round(newBalance * 100) / 100;
         
         const safeAmountFloat = parseFloat(safeAmount);

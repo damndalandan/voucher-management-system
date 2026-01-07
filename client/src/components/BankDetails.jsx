@@ -755,7 +755,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                     <div className="relative">
                         <span className="absolute left-3 top-2.5 text-gray-400 font-bold">₱</span>
                         <input 
-                            type="number"
+                            type="text"
                             placeholder="0.00" 
                             className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                             value={transactionForm.amount}
@@ -927,8 +927,8 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                     <div className="relative">
                         <span className="absolute left-3 top-2.5 text-gray-400 font-bold">₱</span>
                         <input 
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            placeholder="0.00"
                             className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                             value={newTransactionAmount}
                             onChange={e => setNewTransactionAmount(e.target.value)}

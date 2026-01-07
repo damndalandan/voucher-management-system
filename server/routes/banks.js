@@ -119,7 +119,7 @@ router.post('/banks/:id/transaction', authenticateToken, (req, res) => {
         db.serialize(() => {
             db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, bank_account_id]);
             db.run("INSERT INTO bank_transactions (bank_account_id, type, category, amount, description, check_no, running_balance, transaction_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                [bank_account_id, type, category, amount, description, check_no, newBalance, transactionDate]);
+                [bank_account_id, type, category, amountFloat, description, check_no, newBalance, transactionDate]);
         });
         
         res.json({ message: "Transaction recorded", new_balance: newBalance });

@@ -223,7 +223,7 @@ const AddBankModal = ({ isOpen, onClose, onAdd, companies, user }) => {
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-gray-400 font-bold">₱</span>
                 <input 
-                    type="number" 
+                    type="text" 
                     value={form.initial_balance}
                     onChange={e => setForm({...form, initial_balance: e.target.value})}
                     className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"

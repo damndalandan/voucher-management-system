@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { resetDatabase, closeDatabase } = require('./database');
+const { resetDatabase, closeDatabase, initDb } = require('./database');
 const syncData = require('./sync');
 const migrateSQLiteToPostgres = require('./migrate');
 const { backupPostgresToSQLite } = require('./backup_service');
@@ -147,8 +147,23 @@ app.post('/api/reset', (req, res) => {
     });
 });
 
-// Run Sync on Start
-setTimeout(syncData, 5000);
+app.post('/api/init', async (req, res) => {
+    try {
+        if (!process.env.DATABASE_URL) {
+            return res.status(400).json({ error: "DATABASE_URL not configured" });
+        }
+        await initDb();
+        res.json({ message: 'Database initialized successfully.' });
+    } catch (error) {
+        console.error("Init Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Run Sync on Start (Only locally)
+if (!process.env.VERCEL) {
+    setTimeout(syncData, 5000);
+}
 
 // Export for Vercel
 module.exports = app;

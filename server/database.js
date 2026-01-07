@@ -175,7 +175,10 @@ const dbWrapper = {
 };
 
 // Initialize DB immediately for Postgres (now that dbWrapper is defined)
-if (isPostgres) {
+if (isPostgres && !process.env.VERCEL) {
+    // Only auto-init in local development or long-running servers.
+    // In Vercel serverless, this adds latency to every cold start.
+    // We assume schema is already set up via 'npm run fix-db' or manual migration.
     initDb();
 }
 
@@ -446,4 +449,4 @@ function closeDatabase(callback) {
 }
 
 // Export the wrapper as 'db' so existing code works without change
-module.exports = { db: dbWrapper, resetDatabase, closeDatabase };
+module.exports = { db: dbWrapper, resetDatabase, closeDatabase, initDb };

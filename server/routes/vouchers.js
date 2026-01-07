@@ -60,7 +60,7 @@ router.get('/vouchers/urgent', authenticateToken, (req, res) => {
     }
 
     let sql = `SELECT v.*, c.name as company_name,
-               GROUP_CONCAT(va.id, '||') as attachment_ids,
+               GROUP_CONCAT(CAST(va.id AS TEXT), '||') as attachment_ids,
                GROUP_CONCAT(va.file_path, '||') as attachment_paths,
                GROUP_CONCAT(va.original_name, '||') as attachment_names
                FROM vouchers v 
@@ -112,7 +112,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
     const { role } = req.user;
 
     let sql = `SELECT v.*, c.name as company_name, u.username as created_by_user, u.full_name as created_by_name,
-               GROUP_CONCAT(va.id, '||') as attachment_ids,
+               GROUP_CONCAT(CAST(va.id AS TEXT), '||') as attachment_ids,
                GROUP_CONCAT(va.file_path, '||') as attachment_paths,
                GROUP_CONCAT(va.original_name, '||') as attachment_names,
                (SELECT COUNT(*) FROM voucher_history WHERE voucher_id = v.id AND action != 'Created') as history_count

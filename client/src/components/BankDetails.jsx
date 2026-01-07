@@ -103,7 +103,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const fetchCategories = async (companyId) => {
       try {
-          const res = await axios.get(`/api/categories?company_id=${companyId}`);
+          const res = await axios.get(`/categories?company_id=${companyId}`);
           setCategories(res.data || []);
           if (res.data && res.data.length > 0) {
               setTransactionForm(prev => ({ ...prev, category: res.data[0].name }));
@@ -116,7 +116,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const fetchTransactions = async (id) => {
     try {
-      const res = await axios.get(`/api/banks/${id}/transactions`);
+      const res = await axios.get(`/banks/${id}/transactions`);
       setTransactions(res.data || []);
     } catch (err) {
       console.error(err);
@@ -126,7 +126,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const fetchCheckbooks = async (id) => {
     try {
-      const res = await axios.get(`/api/banks/${id}/checkbooks`);
+      const res = await axios.get(`/banks/${id}/checkbooks`);
       setCheckbooks(res.data || []);
     } catch (err) {
       console.error(err);
@@ -136,7 +136,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const fetchChecks = async (id) => {
     try {
-      const res = await axios.get(`/api/banks/${id}/checks`);
+      const res = await axios.get(`/banks/${id}/checks`);
       setChecks(res.data || []);
     } catch (err) {
       console.error(err);
@@ -147,7 +147,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleAddCheckbook = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`/api/banks/${account.id}/checkbooks`, checkbookForm);
+      await axios.post(`/banks/${account.id}/checkbooks`, checkbookForm);
       setShowAddCheckbook(false);
       setCheckbookForm({ series_start: '', series_end: '' });
       fetchCheckbooks(account.id);
@@ -159,7 +159,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleTransaction = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`/api/banks/${account.id}/transaction`, transactionForm);
+      await axios.post(`/banks/${account.id}/transaction`, transactionForm);
       setShowTransactionModal(false);
       setTransactionForm({ 
           type: 'Deposit', 
@@ -193,7 +193,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
       try {
           // action: 'Cancelled' (Voided handled separately via confirmation)
-          await axios.post(`/api/checks/${id}/status`, { status: action });
+          await axios.post(`/checks/${id}/status`, { status: action });
           fetchChecks(account.id);
       } catch (err) {
           showAlert('Error updating check status', 'error');
@@ -207,7 +207,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           return;
       }
       try {
-          await axios.post(`/api/checks/${selectedCheckId}/status`, { 
+          await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Claimed',
               received_by: receivedByName
           });
@@ -223,7 +223,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleConfirmClear = async (e) => {
       e.preventDefault();
       try {
-          await axios.post(`/api/checks/${selectedCheckId}/status`, { 
+          await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Cleared',
               date: clearDate 
           });
@@ -245,7 +245,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleSaveDate = async (e) => {
       e.preventDefault();
       try {
-          await axios.put(`/api/checks/${selectedCheckForDateEdit.id}`, {
+          await axios.put(`/checks/${selectedCheckForDateEdit.id}`, {
               date_issued: newDateIssued
           });
           setShowEditDateModal(false);
@@ -266,7 +266,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleSaveTransactionDate = async (e) => {
       e.preventDefault();
       try {
-          await axios.put(`/api/transactions/${selectedTransactionForEdit.id}`, {
+          await axios.put(`/transactions/${selectedTransactionForEdit.id}`, {
               transaction_date: newTransactionDate,
               amount: newTransactionAmount
           });

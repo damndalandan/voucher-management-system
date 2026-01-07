@@ -84,7 +84,7 @@ router.post('/banks/:id/checkbooks', authenticateToken, (req, res) => {
 
 // Get Transactions
 router.get('/banks/:id/transactions', authenticateToken, (req, res) => {
-    db.all("SELECT * FROM bank_transactions WHERE bank_account_id = ? ORDER BY transaction_date DESC", [req.params.id], (err, rows) => {
+    db.all("SELECT * FROM bank_transactions WHERE bank_account_id = ? ORDER BY transaction_date ASC, id ASC", [req.params.id], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });

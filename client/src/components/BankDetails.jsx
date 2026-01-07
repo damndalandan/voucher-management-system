@@ -307,6 +307,20 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
     (!filterDate || t.transaction_date.startsWith(filterDate))
   ).sort((a, b) => new Date(a.transaction_date) - new Date(b.transaction_date) || a.id - b.id);
 
+  // Auto-scroll to bottom on load/update if showing passbook
+  useEffect(() => {
+    if (activeTab === 'passbook' && scrollContainerRef.current) {
+         // Use setTimeout to allow render to complete
+        setTimeout(() => {
+            const { scrollHeight, clientHeight } = scrollContainerRef.current;
+            scrollContainerRef.current.scrollTo({
+                top: scrollHeight - clientHeight,
+                behavior: 'smooth'
+            });
+        }, 100);
+    }
+  }, [activeTab, transactions, filteredTransactions.length]);
+
   if (!account) return <div className="text-gray-500">Select an account</div>;
 
   return (

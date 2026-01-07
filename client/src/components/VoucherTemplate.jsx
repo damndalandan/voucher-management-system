@@ -49,7 +49,7 @@ export const VoucherCopy = ({ data, title, settings }) => {
             <span className="font-bold text-gray-400 text-xs uppercase tracking-wider">Amount</span>
             <span className="text-xl font-bold text-gray-900 font-mono ml-auto">
               <span className="text-base mr-1">₱</span>
-              {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(data.amount)}
+              {new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(data.amount)}
             </span>
           </div>
         </div>

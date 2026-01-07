@@ -36,7 +36,7 @@ router.post('/banks', authenticateToken, (req, res) => {
     }
     
     let floatBalance = parseFloat(processedBalance) || 0;
-    floatBalance = Math.round(floatBalance * 100) / 100;
+    // floatBalance = Math.round(floatBalance * 100) / 100;
 
     db.run("INSERT INTO bank_accounts (company_id, bank_name, account_number, current_balance) VALUES (?, ?, ?, ?)", 
         [company_id, bank_name, account_number, floatBalance], 
@@ -113,8 +113,8 @@ router.post('/banks/:id/transaction', authenticateToken, (req, res) => {
             newBalance -= amountFloat;
         }
 
-        // Round to 2 decimals
-        newBalance = Math.round(newBalance * 100) / 100;
+        // Use raw balance
+        // newBalance = Math.round(newBalance * 100) / 100;
         
         const transactionDate = date || new Date().toISOString();
 
@@ -141,7 +141,7 @@ router.post('/banks/:id/deposit', authenticateToken, (req, res) => {
         }
         
         let newBalance = row.current_balance + parseFloat(safeAmount);
-        newBalance = Math.round(newBalance * 100) / 100;
+        // newBalance = Math.round(newBalance * 100) / 100;
         
         const safeAmountFloat = parseFloat(safeAmount);
 
@@ -210,8 +210,8 @@ router.put('/transactions/:id', authenticateToken, (req, res) => {
                                 runningBalance -= amt;
                             }
                             
-                            // Ensure 2 decimals for precision
-                            runningBalance = Math.round(runningBalance * 100) / 100;
+                            // Ensure raw precision
+                            // runningBalance = Math.round(runningBalance * 100) / 100;
                             
                             updateStmt.run(runningBalance, t.id);
                         });

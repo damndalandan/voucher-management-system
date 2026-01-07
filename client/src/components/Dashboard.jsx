@@ -338,7 +338,7 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
             <div className="w-full md:w-auto text-left md:text-right">
               <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Amount</label>
               <div className="text-xl font-bold text-gray-900 font-mono">
-                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(voucher.amount)}
+                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(voucher.amount)}
               </div>
             </div>
           </div>
@@ -548,7 +548,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks 
                 <div className="absolute top-0 left-0 w-full h-1 bg-blue-200"></div>
                 <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Amount to Issue</div>
                 <div className="text-4xl font-bold text-gray-900 font-mono mb-2 tracking-tight">
-                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(voucher.amount)}
+                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(voucher.amount)}
                 </div>
                 <div className="text-sm font-medium text-gray-600">To: <span className="font-bold text-gray-900 text-lg ml-1">{voucher.payee}</span></div>
             </div>
@@ -1966,7 +1966,7 @@ const Dashboard = ({ user, onLogout }) => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{v.company_name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{v.payee}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold font-mono">
-                                            {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v.amount)}
+                                            {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(v.amount)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{v.status}</td>
                                         <td className="px-2 py-4 whitespace-nowrap text-center text-sm font-medium sticky right-0 bg-white z-10 shadow-[-5px_0_5px_-5px_rgba(0,0,0,0.1)]">
@@ -2055,7 +2055,7 @@ const Dashboard = ({ user, onLogout }) => {
                             <div>
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Current Balance</p>
                                 <p className="text-3xl font-bold text-gray-900 tracking-tight">
-                                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(bank.current_balance)}
+                                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(bank.current_balance)}
                                 </p>
                             </div>
 
@@ -2074,7 +2074,7 @@ const Dashboard = ({ user, onLogout }) => {
                                         <AlertTriangle size={12} /> Unclaimed Checks
                                     </p>
                                     <p className="text-lg font-bold text-orange-700">
-                                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(bank.unclaimed_balance || 0)}
+                                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(bank.unclaimed_balance || 0)}
                                     </p>
                                 </div>
                                 <div className="text-right">
@@ -2122,7 +2122,7 @@ const Dashboard = ({ user, onLogout }) => {
           />
           <StatsCard 
               title="Total Amount" 
-              value={new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(stats.total_amount)} 
+              value={new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(stats.total_amount)} 
               icon={TrendingUp} 
               color="bg-green-500" 
           />
@@ -2203,7 +2203,7 @@ const Dashboard = ({ user, onLogout }) => {
                             </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                            <p className="font-bold text-gray-900 text-sm">{new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(voucher.amount)}</p>
+                            <p className="font-bold text-gray-900 text-sm">{new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(voucher.amount)}</p>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{voucher.voucher_no}</p>
                         </div>
                     </div>
@@ -2464,7 +2464,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{voucher.date}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{voucher.payee}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold font-mono">
-                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(voucher.amount)}
+                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(voucher.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${

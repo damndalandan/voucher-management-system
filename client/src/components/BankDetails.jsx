@@ -334,7 +334,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                 <div className={isCompact ? '' : 'mt-6'}>
                     {!isCompact && <p className="text-blue-200 text-sm font-medium uppercase tracking-wider mb-1">Current Balance</p>}
                     <p className={`${isCompact ? 'text-2xl' : 'text-5xl'} font-bold tracking-tight transition-all`}>
-                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(account.current_balance)}
+                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(account.current_balance)}
                     </p>
                 </div>
                 
@@ -531,7 +531,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                                 <div className="text-gray-500 text-xs mt-0.5">{check.description}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right text-gray-900">
-                                                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(check.amount)}
+                                                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(check.amount)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                 <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${
@@ -636,23 +636,23 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right text-green-600">
                                                 {tx.type === 'Deposit' ? (
                                                     <span className="bg-green-50 px-2 py-1 rounded text-green-700">
-                                                        + {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(tx.amount)}
+                                                        + {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(tx.amount)}
                                                     </span>
                                                 ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-right text-red-600">
                                                 {tx.type === 'Withdrawal' ? (
                                                     <span className="bg-red-50 px-2 py-1 rounded text-red-700">
-                                                        - {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(tx.amount)}
+                                                        - {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(tx.amount)}
                                                     </span>
                                                 ) : tx.type === 'Bounced' ? (
                                                     <span className="bg-red-50 px-2 py-1 rounded text-red-700">
-                                                        ! {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(tx.amount)}
+                                                        ! {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(tx.amount)}
                                                     </span>
                                                 ) : '-'}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 text-right">
-                                                {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2 }).format(tx.running_balance)}
+                                                {new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(tx.running_balance)}
                                             </td>
                                         </tr>
                                     ))}

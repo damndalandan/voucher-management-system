@@ -333,7 +333,11 @@ const Settings = ({ user, onBack }) => {
   };
 
   const handleBackup = () => {
-    window.open('/backup', '_blank');
+    // Check if we are in production/Vercel to determine URL
+    // Since we use the same domain, /api/backup should work if proxy is set up or rewrite exists
+    // But window.open needs absolute or root-relative path.
+    // The issue was likely due to client-side routing catching /backup
+    window.open('/api/backup', '_blank');
   };
 
   const handleReset = async () => {

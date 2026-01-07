@@ -160,12 +160,25 @@ const CustomSelect = ({ label, icon: Icon, ...props }) => (
 );
 
 const AddBankModal = ({ isOpen, onClose, onAdd, companies, user }) => {
-  const [form, setForm] = useState({ bank_name: '', account_number: '', company_id: '', initial_balance: 0 });
+  const [form, setForm] = useState({ bank_name: '', account_number: '', company_id: '', initial_balance: '' });
+
+  const formatAmount = (value) => {
+    let num = value.replace(/[^0-9.]/g, '');
+    const parts = num.split('.');
+    if (parts[0]) {
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    return parts.slice(0, 2).join('.');
+  };
+
+  const handleAmountChange = (e) => {
+      setForm({...form, initial_balance: formatAmount(e.target.value)});
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onAdd(form);
-    setForm({ bank_name: '', account_number: '', company_id: '', initial_balance: 0 });
+    setForm({ bank_name: '', account_number: '', company_id: '', initial_balance: '' });
   };
 
   if (!isOpen) return null;
@@ -225,7 +238,7 @@ const AddBankModal = ({ isOpen, onClose, onAdd, companies, user }) => {
                 <input 
                     type="text" 
                     value={form.initial_balance}
-                    onChange={e => setForm({...form, initial_balance: e.target.value})}
+                    onChange={handleAmountChange}
                     className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                     placeholder="0.00"
                 />

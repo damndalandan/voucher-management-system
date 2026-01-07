@@ -65,6 +65,15 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
     date: new Date().toISOString().split('T')[0]
   });
 
+  const formatAmount = (value) => {
+    let num = value.toString().replace(/[^0-9.]/g, '');
+    const parts = num.split('.');
+    if (parts[0]) {
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    return parts.slice(0, 2).join('.');
+  };
+
   const [isCompact, setIsCompact] = useState(false);
   const scrollContainerRef = useRef(null);
 
@@ -259,7 +268,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleEditTransactionDate = (tx) => {
       setSelectedTransactionForEdit(tx);
       setNewTransactionDate(tx.transaction_date.split('T')[0]);
-      setNewTransactionAmount(tx.amount);
+      setNewTransactionAmount(formatAmount(tx.amount));
       setShowEditTransactionDateModal(true);
   };
 
@@ -759,7 +768,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                             placeholder="0.00" 
                             className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                             value={transactionForm.amount}
-                            onChange={e => setTransactionForm({...transactionForm, amount: e.target.value})}
+                            onChange={e => setTransactionForm({...transactionForm, amount: formatAmount(e.target.value)})}
                             required
                         />
                     </div>
@@ -931,7 +940,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                             placeholder="0.00"
                             className="w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pl-8 transition-all font-mono font-bold"
                             value={newTransactionAmount}
-                            onChange={e => setNewTransactionAmount(e.target.value)}
+                            onChange={e => setNewTransactionAmount(formatAmount(e.target.value))}
                             required
                         />
                     </div>

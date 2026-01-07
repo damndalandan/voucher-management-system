@@ -17,7 +17,7 @@ if (isPostgres) {
         ssl: { rejectUnauthorized: false }
     });
     // Initialize DB immediately for Postgres
-    initDb();
+    // initDb() call moved to after dbWrapper definition to avoid ReferenceError
 } else {
     // SQLite Fallback (Development)
     console.log("Using SQLite Database");
@@ -153,15 +153,20 @@ const dbWrapper = {
     }
 };
 
+// Initialize DB immediately for Postgres (now that dbWrapper is defined)
+if (isPostgres) {
+    initDb();
+}
+
 // Helper to run query as promise
-const runAsync = (sql, params = []) => {
+function runAsync(sql, params = []) {
     return new Promise((resolve, reject) => {
         dbWrapper.run(sql, params, function(err) {
             if (err) reject(err);
             else resolve(this); // this contains lastID/changes
         });
     });
-};
+}
 
 async function initDb() {
     const AUTO_INCREMENT = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';

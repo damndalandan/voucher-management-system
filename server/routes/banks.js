@@ -27,16 +27,27 @@ router.get('/banks', authenticateToken, (req, res) => {
 router.post('/banks', authenticateToken, (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ error: "Access denied" });
 
-    const { company_id, bank_name, account_number, initial_balance } = req.body;
+    let { company_id, bank_name, account_number, initial_balance } = req.body;
+    
+    // Ensure initial_balance is a valid number
+    initial_balance = parseFloat(initial_balance) || 0;
+
     db.run("INSERT INTO bank_accounts (company_id, bank_name, account_number, current_balance) VALUES (?, ?, ?, ?)", 
-        [company_id, bank_name, account_number, initial_balance || 0], 
+        [company_id, bank_name, account_number, initial_balance], 
         function(err) {
             if (err) return res.status(500).json({ error: err.message });
+            
+            const bankId = this.lastID;
+            
             if (initial_balance > 0) {
-                db.run("INSERT INTO bank_transactions (bank_account_id, type, amount, description, running_balance) VALUES (?, 'Deposit', ?, 'Initial Balance', ?)",
-                    [this.lastID, initial_balance, initial_balance]);
+                 const today = new Date().toISOString();
+                 // Added explicit transaction_date and error logging
+                db.run("INSERT INTO bank_transactions (bank_account_id, type, amount, description, running_balance, transaction_date) VALUES (?, 'Deposit', ?, 'Initial Balance', ?, ?)",
+                    [bankId, initial_balance, initial_balance, today], (err) => {
+                        if (err) console.error("Error creating initial balance transaction:", err);
+                    });
             }
-            res.json({ id: this.lastID, message: "Bank account created" });
+            res.json({ id: bankId, message: "Bank account created" });
         }
     );
 });

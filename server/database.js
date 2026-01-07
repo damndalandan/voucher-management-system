@@ -113,7 +113,11 @@ const dbWrapper = {
                  // Mimic sqlite3 'this.changes'
                  context.changes = res.rowCount;
             }
-            if (callback) callback.call(context, err);
+            if (callback) {
+                callback.call(context, err);
+            } else if (err) {
+                console.error("Database Error (No Callback):", err.message, "Query:", normalizedSql);
+            }
         });
     },
     get: function(sql, params, callback) {

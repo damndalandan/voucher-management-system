@@ -74,7 +74,18 @@ async function backupPostgresToSQLite(res) {
                 const stmt = sqliteDb.prepare(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${placeholders})`);
                 
                 rows.forEach(row => {
-                    stmt.run(Object.values(row));
+                    const values = Object.values(row).map(val => {
+                        // Ensure Dates are converted to ISO strings for SQLite/Portability
+                        if (val instanceof Date) {
+                            return val.toISOString();
+                        }
+                        // Ensure Objects/Arrays (JSON) are stringified if PG returns them as objects
+                        if (typeof val === 'object' && val !== null) {
+                            return JSON.stringify(val);
+                        }
+                        return val;
+                    });
+                    stmt.run(values);
                 });
                 stmt.finalize();
             }

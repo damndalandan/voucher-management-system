@@ -265,11 +265,13 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const handleSaveTransactionDate = async (e) => {
       e.preventDefault();
+      console.log('Starting transaction update...', selectedTransactionForEdit);
       try {
           await axios.put(`/transactions/${selectedTransactionForEdit.id}`, {
               transaction_date: newTransactionDate,
               amount: newTransactionAmount
           });
+          console.log('Transaction update successful');
           setShowEditTransactionDateModal(false);
           fetchTransactions(account.id);
           fetchChecks(account.id); // Refresh checks too as balance might affect logic? No, but good practice.
@@ -278,7 +280,8 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           
           showAlert('Transaction updated successfully', 'success');
       } catch (err) {
-          showAlert('Error updating transaction', 'error');
+          console.error('Error updating transaction:', err);
+          showAlert('Error updating transaction: ' + (err.response?.data?.error || err.message), 'error');
       }
   };
 

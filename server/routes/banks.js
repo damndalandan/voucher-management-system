@@ -31,6 +31,7 @@ router.post('/banks', authenticateToken, (req, res) => {
     
     // Ensure initial_balance is a valid number
     initial_balance = parseFloat(initial_balance) || 0;
+    initial_balance = Math.round(initial_balance * 100) / 100;
 
     db.run("INSERT INTO bank_accounts (company_id, bank_name, account_number, current_balance) VALUES (?, ?, ?, ?)", 
         [company_id, bank_name, account_number, initial_balance], 
@@ -93,11 +94,15 @@ router.post('/banks/:id/transaction', authenticateToken, (req, res) => {
         if (err || !row) return res.status(404).json({ error: "Account not found" });
         
         let newBalance = row.current_balance;
+        const amountFloat = parseFloat(amount);
         if (type === 'Deposit') {
-            newBalance += parseFloat(amount);
+            newBalance += amountFloat;
         } else {
-            newBalance -= parseFloat(amount);
+            newBalance -= amountFloat;
         }
+
+        // Round to 2 decimals
+        newBalance = Math.round(newBalance * 100) / 100;
         
         const transactionDate = date || new Date().toISOString();
 
@@ -117,7 +122,9 @@ router.post('/banks/:id/deposit', authenticateToken, (req, res) => {
     const bank_account_id = req.params.id;
     db.get("SELECT current_balance FROM bank_accounts WHERE id = ?", [bank_account_id], (err, row) => {
         if (err || !row) return res.status(404).json({ error: "Account not found" });
-        const newBalance = row.current_balance + parseFloat(amount);
+        let newBalance = row.current_balance + parseFloat(amount);
+        newBalance = Math.round(newBalance * 100) / 100;
+
         db.serialize(() => {
             db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [newBalance, bank_account_id]);
             db.run("INSERT INTO bank_transactions (bank_account_id, type, category, amount, description, running_balance) VALUES (?, 'Deposit', 'Sales', ?, ?, ?)",
@@ -167,29 +174,16 @@ router.put('/transactions/:id', authenticateToken, (req, res) => {
 
                         transactions.forEach(t => {
                             const amt = parseFloat(t.amount);
-                            // Assuming 'Deposit' adds to balance, everything else subtracts (Withdrawal, Bounced, etc.)
-                            // Adjust logic if 'Bounced' behaves differently (e.g. Bounced Check adds back money?)
-                            // Based on previous code: 
-                            // Deposit -> +
-                            // Withdrawal -> -
-                            // Bounced (if it was a check clearing) -> + (Reversal)
-                            // Void Refund -> +
-                            
-                            // However, the 'type' field in DB is what we have.
-                            // Let's look at how they are inserted.
-                            // Deposit -> 'Deposit'
-                            // Withdrawal -> 'Withdrawal'
-                            // Bounced Check Reversal -> 'Deposit' (type is Deposit, category is Reversal)
-                            // Bounced Check Fee -> 'Bounced' (type is Bounced) -> usually 0 or fee?
-                            
-                            // Simplest assumption: Deposit adds, everything else subtracts?
-                            // Let's check the 'type' column usage.
-                            
+
                             if (t.type === 'Deposit') {
                                 runningBalance += amt;
                             } else {
+                                // Withdrawal, Bounced, etc. deduct from balance
                                 runningBalance -= amt;
                             }
+                            
+                            // Ensure 2 decimals for precision
+                            runningBalance = Math.round(runningBalance * 100) / 100;
                             
                             updateStmt.run(runningBalance, t.id);
                         });

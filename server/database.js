@@ -14,7 +14,9 @@ if (isPostgres) {
     console.log("Using PostgreSQL Database");
     db = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { 
+            rejectUnauthorized: false 
+        }
     });
     // Initialize DB immediately for Postgres
     // initDb() call moved to after dbWrapper definition to avoid ReferenceError

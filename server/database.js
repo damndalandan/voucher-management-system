@@ -28,6 +28,7 @@ if (isPostgres) {
     } else {
         dbPath = path.resolve(__dirname, 'vouchers.db');
     }
+    console.log("Database path:", dbPath);
 
     const restorePath = path.resolve(__dirname, 'restore_pending.db');
 
@@ -152,17 +153,26 @@ const dbWrapper = {
     }
 };
 
-function initDb() {
-    dbWrapper.serialize(() => {
-        const AUTO_INCREMENT = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
-        const DATETIME_TYPE = isPostgres ? 'TIMESTAMP' : 'DATETIME';
-        const TEXT_TYPE = 'TEXT';
-        
-        // Helper to run query only if not error
-        const run = (sql, cb) => dbWrapper.run(sql, [], cb);
+// Helper to run query as promise
+const runAsync = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        dbWrapper.run(sql, params, function(err) {
+            if (err) reject(err);
+            else resolve(this); // this contains lastID/changes
+        });
+    });
+};
 
-        // Create Companies Table
-        run(`CREATE TABLE IF NOT EXISTS companies (
+async function initDb() {
+    const AUTO_INCREMENT = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const DATETIME_TYPE = isPostgres ? 'TIMESTAMP' : 'DATETIME';
+    const TEXT_TYPE = 'TEXT';
+    
+    console.log(`Initializing Database Schema (${isPostgres ? 'Postgres' : 'SQLite'})...`);
+
+    try {
+        // 1. Independent Tables
+        await runAsync(`CREATE TABLE IF NOT EXISTS companies (
             id ${AUTO_INCREMENT},
             name ${TEXT_TYPE} NOT NULL,
             prefix ${TEXT_TYPE} NOT NULL UNIQUE,
@@ -170,8 +180,38 @@ function initDb() {
             contact ${TEXT_TYPE}
         )`);
 
-        // Create Company Requests Table
-        run(`CREATE TABLE IF NOT EXISTS company_requests (
+        // 2. Tables requesting Companies
+        await runAsync(`CREATE TABLE IF NOT EXISTS users (
+            id ${AUTO_INCREMENT},
+            username ${TEXT_TYPE} NOT NULL UNIQUE,
+            password ${TEXT_TYPE} NOT NULL,
+            role ${TEXT_TYPE} NOT NULL,
+            company_id INTEGER,
+            full_name ${TEXT_TYPE},
+            signature_path ${TEXT_TYPE},
+            FOREIGN KEY (company_id) REFERENCES companies(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS bank_accounts (
+            id ${AUTO_INCREMENT},
+            company_id INTEGER,
+            bank_name ${TEXT_TYPE} NOT NULL,
+            account_number ${TEXT_TYPE} NOT NULL,
+            current_balance REAL DEFAULT 0,
+            FOREIGN KEY (company_id) REFERENCES companies(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS categories (
+            id ${AUTO_INCREMENT},
+            company_id INTEGER,
+            name ${TEXT_TYPE} NOT NULL,
+            role ${TEXT_TYPE},
+            UNIQUE(company_id, name),
+            FOREIGN KEY (company_id) REFERENCES companies(id)
+        )`);
+
+        // 3. Tables depending on Users and Companies
+        await runAsync(`CREATE TABLE IF NOT EXISTS company_requests (
             id ${AUTO_INCREMENT},
             company_id INTEGER NOT NULL,
             requested_by INTEGER NOT NULL,
@@ -184,20 +224,19 @@ function initDb() {
             FOREIGN KEY (requested_by) REFERENCES users(id)
         )`);
 
-        // Create Users Table
-        run(`CREATE TABLE IF NOT EXISTS users (
+        await runAsync(`CREATE TABLE IF NOT EXISTS profile_update_requests (
             id ${AUTO_INCREMENT},
-            username ${TEXT_TYPE} NOT NULL UNIQUE,
-            password ${TEXT_TYPE} NOT NULL,
-            role ${TEXT_TYPE} NOT NULL,
-            company_id INTEGER,
-            full_name ${TEXT_TYPE},
-            signature_path ${TEXT_TYPE},
-            FOREIGN KEY (company_id) REFERENCES companies(id)
+            user_id INTEGER NOT NULL,
+            new_username ${TEXT_TYPE},
+            new_password ${TEXT_TYPE},
+            new_full_name ${TEXT_TYPE},
+            new_signature_path ${TEXT_TYPE},
+            status ${TEXT_TYPE} DEFAULT 'Pending',
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )`);
 
-        // Create Vouchers Table
-        run(`CREATE TABLE IF NOT EXISTS vouchers (
+        await runAsync(`CREATE TABLE IF NOT EXISTS vouchers (
             id ${AUTO_INCREMENT},
             voucher_no ${TEXT_TYPE} NOT NULL UNIQUE,
             company_id INTEGER NOT NULL,
@@ -226,22 +265,30 @@ function initDb() {
             approval_attachment ${TEXT_TYPE},
             FOREIGN KEY (company_id) REFERENCES companies(id),
             FOREIGN KEY (created_by) REFERENCES users(id)
-        )`, () => {
-              seedData();
-        });
-
-        // Create Bank Accounts Table
-        run(`CREATE TABLE IF NOT EXISTS bank_accounts (
-            id ${AUTO_INCREMENT},
-            company_id INTEGER,
-            bank_name ${TEXT_TYPE} NOT NULL,
-            account_number ${TEXT_TYPE} NOT NULL,
-            current_balance REAL DEFAULT 0,
-            FOREIGN KEY (company_id) REFERENCES companies(id)
         )`);
 
-        // Create Checkbooks Table
-        run(`CREATE TABLE IF NOT EXISTS checkbooks (
+        // 4. Tables depending on Vouchers or Bank Accounts
+        await runAsync(`CREATE TABLE IF NOT EXISTS voucher_attachments (
+            id ${AUTO_INCREMENT},
+            voucher_id INTEGER NOT NULL,
+            file_path ${TEXT_TYPE} NOT NULL,
+            original_name ${TEXT_TYPE},
+            uploaded_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS voucher_history (
+            id ${AUTO_INCREMENT},
+            voucher_id INTEGER NOT NULL,
+            user_id INTEGER,
+            action ${TEXT_TYPE},
+            details ${TEXT_TYPE},
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (voucher_id) REFERENCES vouchers(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS checkbooks (
             id ${AUTO_INCREMENT},
             bank_account_id INTEGER NOT NULL,
             series_start INTEGER NOT NULL,
@@ -251,8 +298,7 @@ function initDb() {
             FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
         )`);
 
-        // Create Bank Transactions Table
-        run(`CREATE TABLE IF NOT EXISTS bank_transactions (
+        await runAsync(`CREATE TABLE IF NOT EXISTS bank_transactions (
             id ${AUTO_INCREMENT},
             bank_account_id INTEGER NOT NULL,
             voucher_id INTEGER,
@@ -267,8 +313,7 @@ function initDb() {
             FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
         )`);
 
-        // Create Checks Table
-        run(`CREATE TABLE IF NOT EXISTS checks (
+        await runAsync(`CREATE TABLE IF NOT EXISTS checks (
             id ${AUTO_INCREMENT},
             bank_account_id INTEGER NOT NULL,
             voucher_id INTEGER,
@@ -284,64 +329,19 @@ function initDb() {
             FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
         )`);
         
-        // Index
-        run("CREATE UNIQUE INDEX IF NOT EXISTS idx_checks_bank_number ON checks (bank_account_id, check_number)");
+        // 5. Indices
+        await runAsync("CREATE UNIQUE INDEX IF NOT EXISTS idx_checks_bank_number ON checks (bank_account_id, check_number)");
 
-        // Create Voucher Attachments Table
-        run(`CREATE TABLE IF NOT EXISTS voucher_attachments (
-            id ${AUTO_INCREMENT},
-            voucher_id INTEGER NOT NULL,
-            file_path ${TEXT_TYPE} NOT NULL,
-            original_name ${TEXT_TYPE},
-            uploaded_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
-        )`);
+        console.log("Database tables initialized successfully.");
+        seedData();
 
-        // Create Voucher History Table
-        run(`CREATE TABLE IF NOT EXISTS voucher_history (
-            id ${AUTO_INCREMENT},
-            voucher_id INTEGER NOT NULL,
-            user_id INTEGER,
-            action ${TEXT_TYPE},
-            details ${TEXT_TYPE},
-            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (voucher_id) REFERENCES vouchers(id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )`);
-
-        // Create Profile Update Requests Table
-        run(`CREATE TABLE IF NOT EXISTS profile_update_requests (
-            id ${AUTO_INCREMENT},
-            user_id INTEGER NOT NULL,
-            new_username ${TEXT_TYPE},
-            new_password ${TEXT_TYPE},
-            new_full_name ${TEXT_TYPE},
-            new_signature_path ${TEXT_TYPE},
-            status ${TEXT_TYPE} DEFAULT 'Pending',
-            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )`);
-
-        // Create Categories Table
-        run(`CREATE TABLE IF NOT EXISTS categories (
-            id ${AUTO_INCREMENT},
-            company_id INTEGER,
-            name ${TEXT_TYPE} NOT NULL,
-            role ${TEXT_TYPE},
-            UNIQUE(company_id, name),
-            FOREIGN KEY (company_id) REFERENCES companies(id)
-        )`);
-    });
-    
-    // Postgres Init usually needs explicit connection check or wait
-    if (isPostgres) {
-        initDbPostgres();
+    } catch (err) {
+        console.error("Critical Error initializing database schema:", err);
     }
 }
 
 async function initDbPostgres() {
-    // For simplicity, we assume the CREATE TABLE IF NOT EXISTS queries above will run through the queue.
-    seedData();
+    // Legacy function, kept for safety but unused
 }
 
 

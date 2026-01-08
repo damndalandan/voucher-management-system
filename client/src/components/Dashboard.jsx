@@ -181,7 +181,7 @@ const CustomSelect = ({ label, icon: Icon, ...props }) => (
   </div>
 );
 
-const AddBankModal = ({ isOpen, onClose, onAdd, companies, user }) => {
+const AddBankModal = ({ isOpen, onClose, onAdd, companies, user, isProcessing }) => {
   const [form, setForm] = useState({ bank_name: '', account_number: '', company_id: '', initial_balance: '' });
 
   const formatAmount = (value) => {
@@ -267,8 +267,28 @@ const AddBankModal = ({ isOpen, onClose, onAdd, companies, user }) => {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-              <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="submit" className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5">Add Account</button>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                disabled={isProcessing}
+                className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                    Cancel
+                </button>
+              <button 
+                type="submit" 
+                disabled={isProcessing}
+                className={`px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
+                >
+                    {isProcessing ? (
+                        <>
+                            <RefreshCw size={18} className="animate-spin" />
+                            Processing...
+                        </>
+                    ) : (
+                        'Add Account'
+                    )}
+                </button>
             </div>
         </form>
       </div>
@@ -1314,12 +1334,14 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
+    setIsProcessing(true);
     try {
       const companyId = user.company_id || selectedCategoryCompany;
       
       // Admin must select a company for general categories
       if (user.role === 'admin' && !companyId) {
           showAlert("Please select a company first", 'error');
+          setIsProcessing(false);
           return;
       }
       
@@ -1331,11 +1353,14 @@ const Dashboard = ({ user, onLogout }) => {
       fetchCategories();
     } catch (err) {
       showAlert('Error adding category: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+        setIsProcessing(false);
     }
   };
 
   const handleAddCompany = async (e) => {
     e.preventDefault();
+    setIsProcessing(true);
     try {
       await axios.post('/companies', newCompanyForm);
       setNewCompanyForm({ name: '', prefix: '', address: '', contact: '' });
@@ -1343,6 +1368,8 @@ const Dashboard = ({ user, onLogout }) => {
       showAlert('Company added successfully', 'success');
     } catch (err) {
       showAlert('Error adding company: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1446,6 +1473,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleUserSubmit = async (e) => {
     e.preventDefault();
+    setIsProcessing(true);
     try {
       await axios.post('/users', userForm);
       showAlert('User created successfully', 'success');
@@ -1454,6 +1482,8 @@ const Dashboard = ({ user, onLogout }) => {
       fetchUsers();
     } catch (err) {
       showAlert('Error saving user', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1679,6 +1709,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleAddAccount = async (formData) => {
+    setIsProcessing(true);
     try {
       await axios.post('/banks', { ...formData, company_id: user.company_id || formData.company_id });
       fetchBanks();
@@ -1686,6 +1717,8 @@ const Dashboard = ({ user, onLogout }) => {
       showAlert('Bank account added successfully', 'success');
     } catch (err) {
       showAlert('Error creating account', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -3046,10 +3079,11 @@ const Dashboard = ({ user, onLogout }) => {
                         </div>
                         <button 
                             type="submit" 
-                            className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:shadow-none"
-                            disabled={user.role === 'admin' && !selectedCategoryCompany}
+                            className={`w-full bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 disabled:shadow-none flex items-center justify-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
+                            disabled={(user.role === 'admin' && !selectedCategoryCompany) || isProcessing}
                         >
-                            Add Category
+                            {isProcessing ? <RefreshCw size={18} className="animate-spin" /> : null}
+                            {isProcessing ? 'Adding...' : 'Add Category'}
                         </button>
                     </form>
                 </div>
@@ -3158,9 +3192,11 @@ const Dashboard = ({ user, onLogout }) => {
                         <div className="flex justify-end pt-2">
                             <button 
                                 type="submit" 
-                                className="w-full bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5"
+                                disabled={isProcessing}
+                                className={`w-full bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
                             >
-                                Add Company
+                                {isProcessing ? <RefreshCw size={18} className="animate-spin" /> : null}
+                                {isProcessing ? 'Adding...' : 'Add Company'}
                             </button>
                         </div>
                     </form>
@@ -4037,6 +4073,7 @@ const Dashboard = ({ user, onLogout }) => {
         onAdd={handleAddAccount}
         companies={companies}
         user={user}
+        isProcessing={isProcessing}
       />
 
       {/* User Modal */}
@@ -4109,8 +4146,17 @@ const Dashboard = ({ user, onLogout }) => {
                       )}
                       
                       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-                          <button type="button" onClick={() => setShowUserModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                          <button type="submit" className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5">Create User</button>
+                          <button type="button" onClick={() => setShowUserModal(false)} disabled={isProcessing} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                          <button type="submit" disabled={isProcessing} className={`px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}>
+                            {isProcessing ? (
+                                <>
+                                    <RefreshCw size={18} className="animate-spin" />
+                                    Creating...
+                                </>
+                            ) : (
+                                'Create User'
+                            )}
+                          </button>
                       </div>
                   </form>
               </div>

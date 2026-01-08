@@ -3,7 +3,7 @@ import axios from '../api';
 import { 
   X, Calendar, User, FileText, DollarSign, CreditCard, 
   Building, AlertTriangle, Clock, CheckCircle, ChevronDown,
-  AlignLeft, Hash, Tag, List, ListOrdered, Paperclip
+  AlignLeft, Hash, Tag, List, ListOrdered, Paperclip, Loader2
 } from 'lucide-react';
 
 const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
@@ -33,6 +33,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
   const [categories, setCategories] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loadingCheckNo, setLoadingCheckNo] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -213,6 +214,8 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
         return;
     }
 
+    setIsProcessing(true);
+
     try {
       const data = new FormData();
       
@@ -265,6 +268,8 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
       onSuccess();
     } catch (err) {
       showAlert('Error saving voucher: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -461,14 +466,14 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
-              <button type="button" onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all">
+              <button type="button" onClick={onCancel} disabled={isProcessing}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all disabled:opacity-50">
               Cancel
               </button>
-              <button onClick={handleSubmit}
-              className="px-4 py-2 border border-transparent rounded-lg shadow-lg shadow-blue-200 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
-              <CheckCircle size={14} />
-              Issue Voucher
+              <button onClick={handleSubmit} disabled={isProcessing}
+              className={`px-4 py-2 border border-transparent rounded-lg shadow-lg shadow-blue-200 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}>
+              {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+              {isProcessing ? 'Issuing...' : 'Issue Voucher'}
               </button>
           </div>
         </div>
@@ -804,14 +809,14 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
-            <button type="button" onClick={onCancel}
-            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all">
+            <button type="button" onClick={onCancel} disabled={isProcessing}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all disabled:opacity-50">
             Cancel
             </button>
-            <button onClick={handleSubmit}
-            className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
-            {initialData ? <CheckCircle size={16} /> : <FileText size={16} />}
-            {initialData ? 'Submit for Approval' : 'Create Voucher'}
+            <button onClick={handleSubmit} disabled={isProcessing}
+            className={`px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}>
+            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : (initialData ? <CheckCircle size={16} /> : <FileText size={16} />)}
+            {isProcessing ? 'Processing...' : (initialData ? 'Submit for Approval' : 'Create Voucher')}
             </button>
         </div>
       </div>

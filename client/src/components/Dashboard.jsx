@@ -12,7 +12,7 @@ import BankDetails from './BankDetails';
 import VoucherHistory from './VoucherHistory';
 import { Link } from 'react-router-dom';
 
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm Approval", confirmColor = "green" }) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm Approval", confirmColor = "green", isProcessing }) => {
   if (!isOpen) return null;
   
   const getColorClasses = () => {
@@ -43,16 +43,27 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
         <div className="flex justify-end space-x-3">
           <button 
             onClick={onClose}
-            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+            disabled={isProcessing}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${getColorClasses()}`}
+            disabled={isProcessing}
+            className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${getColorClasses()} ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
           >
-            {confirmColor === 'green' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-            {confirmText}
+            {isProcessing ? (
+                <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Processing...
+                </>
+            ) : (
+                <>
+                     {confirmColor === 'green' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                     {confirmText}
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -85,7 +96,7 @@ const SuccessModal = ({ isOpen, onClose, title, message }) => {
   );
 };
 
-const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, title = "Delete Category" }) => {
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, title = "Delete Category", isProcessing }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -102,16 +113,27 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, itemName, title =
         <div className="flex justify-end space-x-3">
           <button 
             onClick={onClose}
-            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+            disabled={isProcessing}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
+            disabled={isProcessing}
+            className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
           >
-            <Trash2 size={18} />
-            Delete
+            {isProcessing ? (
+                <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Processing...
+                </>
+            ) : (
+                <>
+                    <Trash2 size={18} />
+                    Delete
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -470,7 +492,7 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
   );
 };
 
-const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks }) => {
+const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks, isProcessing }) => {
   const [checkNo, setCheckNo] = useState('');
   const [bankName, setBankName] = useState('');
   const [checkDate, setCheckDate] = useState('');
@@ -724,16 +746,27 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks 
         <div className="p-5 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl flex justify-end gap-3">
             <button 
                 onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all"
+                disabled={isProcessing}
+                className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-white hover:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 Cancel
             </button>
             <button 
                 onClick={handleConfirm}
-                className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-green-200 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
+                disabled={isProcessing}
+                className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-green-200 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
             >
-                <CheckCircle size={18} />
-                {showCheckInputs ? 'Submit for Admin Approval' : 'Confirm Approval'}
+                {isProcessing ? (
+                    <>
+                        <RefreshCw size={18} className="animate-spin" />
+                        Processing...
+                    </>
+                ) : (
+                    <>
+                        <CheckCircle size={18} />
+                        {showCheckInputs ? 'Submit for Admin Approval' : 'Confirm Approval'}
+                    </>
+                )}
             </button>
         </div>
       </div>
@@ -741,7 +774,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks 
   );
 };
 
-const VoidReasonModal = ({ isOpen, onClose, onSubmit }) => {
+const VoidReasonModal = ({ isOpen, onClose, onSubmit, isProcessing }) => {
   const [reason, setReason] = useState('');
 
   if (!isOpen) return null;
@@ -780,8 +813,28 @@ const VoidReasonModal = ({ isOpen, onClose, onSubmit }) => {
               />
             </div>
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-              <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="submit" className="px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all transform hover:-translate-y-0.5">Submit Request</button>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                disabled={isProcessing}
+                className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button 
+                  type="submit" 
+                  disabled={isProcessing}
+                  className={`px-5 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
+              >
+                  {isProcessing ? (
+                      <>
+                          <RefreshCw size={18} className="animate-spin" />
+                          Processing...
+                      </>
+                  ) : (
+                      'Submit Request'
+                  )}
+              </button>
             </div>
         </form>
       </div>
@@ -789,7 +842,7 @@ const VoidReasonModal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-const VoidReviewModal = ({ isOpen, onClose, onApprove, onReject, voucher }) => {
+const VoidReviewModal = ({ isOpen, onClose, onApprove, onReject, voucher, isProcessing }) => {
   if (!isOpen || !voucher) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -815,17 +868,28 @@ const VoidReviewModal = ({ isOpen, onClose, onApprove, onReject, voucher }) => {
         <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={onReject}
-            className="px-4 py-3 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors flex items-center justify-center gap-2"
+            disabled={isProcessing}
+            className={`px-4 py-3 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors flex items-center justify-center gap-2 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <X size={18} />
             Reject Request
           </button>
           <button 
             onClick={onApprove}
-            className="px-4 py-3 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            disabled={isProcessing}
+            className={`px-4 py-3 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 ${isProcessing ? 'opacity-75 cursor-not-allowed transform-none' : ''}`}
           >
-            <CheckCircle size={18} />
-            Approve Void
+            {isProcessing ? (
+                <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Processing...
+                </>
+            ) : (
+                <>
+                    <CheckCircle size={18} />
+                    Approve Void
+                </>
+            )}
           </button>
         </div>
         <button 
@@ -839,7 +903,7 @@ const VoidReviewModal = ({ isOpen, onClose, onApprove, onReject, voucher }) => {
   );
 };
 
-const DeleteCompanyModal = ({ isOpen, onClose, onConfirm, companyName, password, setPassword }) => {
+const DeleteCompanyModal = ({ isOpen, onClose, onConfirm, companyName, password, setPassword, isProcessing }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -870,17 +934,27 @@ const DeleteCompanyModal = ({ isOpen, onClose, onConfirm, companyName, password,
         <div className="flex justify-end space-x-3">
           <button 
             onClick={onClose}
-            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+            disabled={isProcessing}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            disabled={!password}
-            className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!password || isProcessing}
+            className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${(!password || isProcessing) ? 'opacity-50 cursor-not-allowed transform-none' : ''}`}
           >
-            <Trash2 size={18} />
-            Delete Company
+            {isProcessing ? (
+                <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Processing...
+                </>
+            ) : (
+                <>
+                    <Trash2 size={18} />
+                    Delete Company
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -888,7 +962,7 @@ const DeleteCompanyModal = ({ isOpen, onClose, onConfirm, companyName, password,
   );
 };
 
-const DeleteBankModal = ({ isOpen, onClose, onConfirm, bankName, password, setPassword }) => {
+const DeleteBankModal = ({ isOpen, onClose, onConfirm, bankName, password, setPassword, isProcessing }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
@@ -919,17 +993,27 @@ const DeleteBankModal = ({ isOpen, onClose, onConfirm, bankName, password, setPa
         <div className="flex justify-end space-x-3">
           <button 
             onClick={onClose}
-            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors"
+            disabled={isProcessing}
+            className="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button 
             onClick={onConfirm}
-            disabled={!password}
-            className="px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!password || isProcessing}
+            className={`px-6 py-2.5 border border-transparent rounded-xl shadow-lg shadow-red-200 text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none transition-all transform hover:-translate-y-0.5 flex items-center gap-2 ${(!password || isProcessing) ? 'opacity-50 cursor-not-allowed transform-none' : ''}`}
           >
-            <Trash2 size={18} />
-            Delete Bank
+            {isProcessing ? (
+                <>
+                    <RefreshCw size={18} className="animate-spin" />
+                    Processing...
+                </>
+            ) : (
+                <>
+                    <Trash2 size={18} />
+                    Delete Bank
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -1028,6 +1112,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [voucherToApprove, setVoucherToApprove] = useState(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [addBankModalOpen, setAddBankModalOpen] = useState(false);
   const [viewingVoucher, setViewingVoucher] = useState(null);
   const [viewingHistory, setViewingHistory] = useState(null);
@@ -1268,6 +1353,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
+    setIsProcessing(true);
     try {
       await axios.delete(`/categories/${categoryToDelete.id}`);
       fetchCategories();
@@ -1275,6 +1361,8 @@ const Dashboard = ({ user, onLogout }) => {
       setCategoryToDelete(null);
     } catch (err) {
       showAlert('Error deleting category', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1286,6 +1374,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmDeleteCompany = async () => {
     if (!companyToDelete || !adminPassword) return;
+    setIsProcessing(true);
     try {
       await axios.delete(`/companies/${companyToDelete.id}`, {
         data: { 
@@ -1300,6 +1389,8 @@ const Dashboard = ({ user, onLogout }) => {
       showAlert('Company deleted successfully', 'success');
     } catch (err) {
       showAlert('Error deleting company: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1373,6 +1464,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
+    setIsProcessing(true);
     try {
       await axios.delete(`/users/${userToDelete.id}`);
       fetchUsers();
@@ -1380,6 +1472,8 @@ const Dashboard = ({ user, onLogout }) => {
       setUserToDelete(null);
     } catch (err) {
       showAlert('Error deleting user', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1406,6 +1500,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const confirmImport = async () => {
+    setIsProcessing(true);
     try {
       const formData = new FormData();
       formData.append('database', fileToImport);
@@ -1428,6 +1523,8 @@ const Dashboard = ({ user, onLogout }) => {
           msg = error.message ? `Failed to restore database: ${error.message}` : 'Failed to restore database (Unknown error)';
       }
       showAlert(msg, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1439,6 +1536,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmDeleteBank = async () => {
     if (!bankToDelete || !adminPassword) return;
+    setIsProcessing(true);
     try {
       await axios.delete(`/banks/${bankToDelete.id}`, {
         data: { 
@@ -1453,6 +1551,8 @@ const Dashboard = ({ user, onLogout }) => {
       showAlert('Bank account deleted successfully', 'success');
     } catch (err) {
       showAlert('Error deleting bank account: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1461,6 +1561,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const confirmReset = async () => {
+    setIsProcessing(true);
     try {
       await axios.post('/reset');
       setResetModalOpen(false);
@@ -1469,6 +1570,8 @@ const Dashboard = ({ user, onLogout }) => {
       fetchVouchers();
     } catch (err) {
       showAlert('Error resetting system', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1600,6 +1703,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmApprove = async (extraData = {}) => {
     if (!voucherToApprove) return;
+    setIsProcessing(true);
     try {
       const isLiaison = user.role === 'liaison';
       const targetStatus = isLiaison ? 'Pending Admin' : 'Issued';
@@ -1618,6 +1722,8 @@ const Dashboard = ({ user, onLogout }) => {
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Error approving voucher';
       showAlert(errorMessage, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1632,6 +1738,7 @@ const Dashboard = ({ user, onLogout }) => {
           showAlert("Please upload the approval document", "error");
           return;
       }
+      setIsProcessing(true);
       try {
           const formData = new FormData();
           formData.append('status', 'Issued');
@@ -1654,6 +1761,8 @@ const Dashboard = ({ user, onLogout }) => {
       } catch (err) {
           console.error(err);
           showAlert(err.response?.data?.error || 'Error processing offline approval', 'error');
+      } finally {
+          setIsProcessing(false);
       }
   };
 
@@ -1668,6 +1777,7 @@ const Dashboard = ({ user, onLogout }) => {
           showAlert("Please enter who received the payment", "error");
           return;
       }
+      setIsProcessing(true);
       try {
           await axios.put(`/vouchers/${voucherToClaim.id}/status`, {
               status: voucherToClaim.payment_type === 'Check' ? 'Claimed' : 'Issued', // If Encashment, 'Issued' is kinda final unless we have 'Claimed' for it too.
@@ -1689,6 +1799,8 @@ const Dashboard = ({ user, onLogout }) => {
           showAlert('Voucher marked as claimed', 'success');
       } catch (err) {
           showAlert(err.response?.data?.error || 'Error marking as claimed', 'error');
+      } finally {
+          setIsProcessing(false);
       }
   };
 
@@ -1698,6 +1810,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const submitVoidRequest = async (reason) => {
+    setIsProcessing(true);
     try {
       await axios.put(`/vouchers/${voucherToVoid}/status`, { 
           status: 'Void Pending Approval',
@@ -1715,12 +1828,14 @@ const Dashboard = ({ user, onLogout }) => {
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Error requesting void';
       showAlert(errorMessage, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const processVoidReview = async (approved) => {
     if (!voidReviewVoucher) return;
-    
+    setIsProcessing(true);
     try {
         const status = approved ? 'Voided' : 'Issued';
         await axios.put(`/vouchers/${voidReviewVoucher.id}/status`, { status });
@@ -1739,6 +1854,8 @@ const Dashboard = ({ user, onLogout }) => {
     } catch (err) {
         const errorMessage = err.response?.data?.error || err.message || 'Error processing void review';
         showAlert(errorMessage, 'error');
+    } finally {
+        setIsProcessing(false);
     }
   };
 
@@ -1749,6 +1866,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmCancelVoucher = async () => {
     if (!voucherToCancel) return;
+    setIsProcessing(true);
     try {
       await axios.put(`/vouchers/${voucherToCancel}`, { status: 'Cancelled' });
       fetchVouchers();
@@ -1758,6 +1876,8 @@ const Dashboard = ({ user, onLogout }) => {
       showAlert('Voucher request cancelled.', 'success');
     } catch (err) {
       showAlert('Error cancelling voucher', 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1768,6 +1888,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const confirmForceDelete = async () => {
       if (!voucherToForceDelete) return;
+      setIsProcessing(true);
       try {
           await axios.delete(`/vouchers/${voucherToForceDelete.id}`);
           fetchVouchers();
@@ -1777,6 +1898,8 @@ const Dashboard = ({ user, onLogout }) => {
           showAlert('Voucher force deleted successfully. Check number is now potentially reusable.', 'success');
       } catch (err) {
           showAlert(err.response?.data?.error || 'Error deleting voucher', 'error');
+      } finally {
+          setIsProcessing(false);
       }
   };
 
@@ -3443,6 +3566,7 @@ const Dashboard = ({ user, onLogout }) => {
         voucher={voucherToApprove}
         user={user}
         banks={banks}
+        isProcessing={isProcessing}
       />
 
       <VoidReasonModal 
@@ -3452,6 +3576,7 @@ const Dashboard = ({ user, onLogout }) => {
             setVoucherToVoid(null);
         }}
         onSubmit={submitVoidRequest}
+        isProcessing={isProcessing}
       />
 
       <VoidReviewModal 
@@ -3460,6 +3585,7 @@ const Dashboard = ({ user, onLogout }) => {
         onClose={() => setVoidReviewVoucher(null)}
         onApprove={() => processVoidReview(true)}
         onReject={() => processVoidReview(false)}
+        isProcessing={isProcessing}
       />
 
       <SuccessModal 
@@ -3474,6 +3600,7 @@ const Dashboard = ({ user, onLogout }) => {
         onClose={() => setDeleteCategoryModalOpen(false)}
         onConfirm={confirmDeleteCategory}
         itemName={categoryToDelete?.name}
+        isProcessing={isProcessing}
       />
 
       <DeleteCompanyModal 
@@ -3487,6 +3614,7 @@ const Dashboard = ({ user, onLogout }) => {
         companyName={companyToDelete?.name}
         password={adminPassword}
         setPassword={setAdminPassword}
+        isProcessing={isProcessing}
       />
 
       <DeleteBankModal 
@@ -3500,6 +3628,7 @@ const Dashboard = ({ user, onLogout }) => {
         bankName={bankToDelete?.bank_name}
         password={adminPassword}
         setPassword={setAdminPassword}
+        isProcessing={isProcessing}
       />
 
       <DeleteConfirmationModal 
@@ -3508,6 +3637,7 @@ const Dashboard = ({ user, onLogout }) => {
         onConfirm={confirmDeleteUser}
         itemName={userToDelete?.username}
         title="Delete User"
+        isProcessing={isProcessing}
       />
 
       <ConfirmationModal 
@@ -3518,6 +3648,7 @@ const Dashboard = ({ user, onLogout }) => {
         message="WARNING: This will delete all voucher data. Are you sure?"
         confirmText="Reset Data"
         confirmColor="red"
+        isProcessing={isProcessing}
       />
 
       <ConfirmationModal 
@@ -3531,6 +3662,7 @@ const Dashboard = ({ user, onLogout }) => {
         message="WARNING: This will overwrite the current database with the imported file. The system will restart. Are you sure?"
         confirmText="Import & Restart"
         confirmColor="red"
+        isProcessing={isProcessing}
       />
 
       <ConfirmationModal 
@@ -3541,6 +3673,7 @@ const Dashboard = ({ user, onLogout }) => {
         message="Are you sure you want to cancel this voucher request?"
         confirmText="Cancel Voucher"
         confirmColor="red"
+        isProcessing={isProcessing}
       />
 
       <AlertModal 
@@ -3895,6 +4028,7 @@ const Dashboard = ({ user, onLogout }) => {
         message={`WARNING: This will permanently delete voucher ${voucherToForceDelete?.voucher_no} and remove all related records (checks, attachments, history). The check number will be reusable. This action CANNOT be undone.`}
         confirmText="Force Delete"
         confirmColor="red"
+        isProcessing={isProcessing}
       />
 
       <AddBankModal 

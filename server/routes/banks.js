@@ -299,4 +299,65 @@ router.post('/banks/:id/recalculate', authenticateToken, (req, res) => {
     });
 });
 
+// Delete Transaction
+router.delete('/transactions/:id', authenticateToken, (req, res) => {
+    const { id } = req.params;
+    const { role } = req.user;
+
+    if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can delete transactions" });
+    }
+
+    db.get("SELECT * FROM bank_transactions WHERE id = ?", [id], (err, tx) => {
+        if (err || !tx) return res.status(404).json({ error: "Transaction not found" });
+
+        const bankId = tx.bank_account_id;
+
+        db.serialize(() => {
+            // 1. Delete the transaction
+            db.run("DELETE FROM bank_transactions WHERE id = ?", [id], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // 2. Recalculate ALL balances for this account
+                db.all("SELECT * FROM bank_transactions WHERE bank_account_id = ? ORDER BY transaction_date ASC, id ASC", 
+                    [bankId], (err, transactions) => {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    let runningBalance = 0;
+                    
+                    const updatePromises = transactions.map(t => {
+                        const amt = parseFloat(t.amount);
+                        if (t.type === 'Deposit') {
+                            runningBalance += amt;
+                        } else {
+                            runningBalance -= amt;
+                        }
+                        return new Promise((resolve, reject) => {
+                            db.run("UPDATE bank_transactions SET running_balance = ? WHERE id = ?", 
+                                [runningBalance, t.id], (err) => {
+                                    if (err) reject(err);
+                                    else resolve();
+                                });
+                        });
+                    });
+
+                    Promise.all(updatePromises)
+                        .then(() => {
+                            // 3. Update final account balance
+                            db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", 
+                                [runningBalance, bankId], (err) => {
+                                    if (err) return res.status(500).json({ error: err.message });
+                                    res.json({ message: "Transaction deleted and passbook recalculated" });
+                                });
+                        })
+                        .catch(err => {
+                            console.error("Error recalculating balances:", err);
+                            res.status(500).json({ error: "Failed to recalculate balances" });
+                        });
+                });
+            });
+        });
+    });
+});
+
 module.exports = router;

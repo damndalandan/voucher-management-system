@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from '../api';
-import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X, Edit, RefreshCw } from 'lucide-react';
+import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X, Edit, RefreshCw, Trash2 } from 'lucide-react';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", confirmColor = "green" }) => {
   if (!isOpen) return null;
@@ -159,18 +159,25 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const handleAddCheckbook = async (e) => {
     e.preventDefault();
+    setShowAddCheckbook(false); // Close immediately for perceived speed
     try {
       await axios.post(`/banks/${account.id}/checkbooks`, checkbookForm);
-      setShowAddCheckbook(false);
       setCheckbookForm({ series_start: '', series_end: '' });
       fetchCheckbooks(account.id);
     } catch (err) {
+      setShowAddCheckbook(true); // Re-open on error? Or just alert.
       showAlert('Error adding checkbook', 'error');
     }
   };
 
   const handleTransaction = async (e) => {
     e.preventDefault();
+    setShowTransactionModal(false); // Close immediately
+    
+    // Save current state for rollback
+    const prevBalance = displayBalance;
+    const prevTransactions = [...transactions];
+
     try {
       // Optimistic UI Update
       const amount = parseFloat(transactionForm.amount.replace(/,/g, ''));
@@ -209,7 +216,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       }
 
       await axios.post(`/banks/${account.id}/transaction`, submitData);
-      setShowTransactionModal(false);
+      
       setTransactionForm({ 
           type: 'Deposit', 
           amount: '', 
@@ -222,8 +229,9 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       if (onUpdate) onUpdate();
     } catch (err) {
       console.error(err);
-      // Revert optimistic update on error if needed, or rely on next fetch
-      if (account) setDisplayBalance(account.current_balance);
+      // Revert optimistic update on error
+      setDisplayBalance(prevBalance);
+      setTransactions(prevTransactions);
       showAlert('Error recording transaction', 'error');
     }
   };
@@ -258,12 +266,12 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           showAlert("Please enter who received the check", "error");
           return;
       }
+      setShowClaimModal(false); // Close immediately
       try {
           await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Claimed',
               received_by: receivedByName
           });
-          setShowClaimModal(false);
           fetchChecks(account.id);
           if (onUpdate) onUpdate(); // Refresh parent stats if needed
           showAlert('Check marked as claimed', 'success');
@@ -274,18 +282,38 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   const handleConfirmClear = async (e) => {
       e.preventDefault();
+      setShowClearModal(false); // Close immediately
       try {
           await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Cleared',
               date: clearDate 
           });
-          setShowClearModal(false);
           fetchChecks(account.id);
           fetchTransactions(account.id);
           if (onUpdate) onUpdate();
       } catch (err) {
           showAlert('Error clearing check', 'error');
       }
+  };
+
+  const handleDeleteTransaction = (tx) => {
+      setConfirmation({
+          isOpen: true,
+          title: 'Delete Transaction',
+          message: 'Are you sure you want to delete this transaction? This will recalculate the running balance for all subsequent transactions.',
+          action: async () => {
+              try {
+                  await axios.delete(`/transactions/${tx.id}`);
+                  showAlert('Transaction deleted successfully', 'success');
+                  fetchTransactions(account.id);
+                  if (onUpdate) onUpdate();
+              } catch (err) {
+                  showAlert('Error deleting transaction', 'error');
+              }
+          },
+          confirmColor: 'red',
+          confirmText: 'Delete'
+      });
   };
 
   const handleEditDate = (check) => {
@@ -679,13 +707,22 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Passbook Tab */}
-            {activeTab === 'passbook' && (
-                <div className="flex flex-col gap-6 min-h-full p-4 md:p-6">
+                    </div>>
+                                                            <button 
+                                                                onClick={() => handleEditTransactionDate(tx)}
+                                                                className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                                title="Edit Transaction"
+                                                            >
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDeleteTransaction(tx)}
+                                                                className="text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                                title="Delete Transaction"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </-4 md:p-6">
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
                         <div className="">
                             <table className="min-w-full divide-y divide-gray-200">

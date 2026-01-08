@@ -707,22 +707,13 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                 </tbody>
                             </table>
                         </div>
-                    </div>>
-                                                            <button 
-                                                                onClick={() => handleEditTransactionDate(tx)}
-                                                                className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
-                                                                title="Edit Transaction"
-                                                            >
-                                                                <Edit size={14} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleDeleteTransaction(tx)}
-                                                                className="text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                                                                title="Delete Transaction"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </-4 md:p-6">
+                    </div>
+                </div>
+            )}
+
+            {/* Passbook Tab */}
+            {activeTab === 'passbook' && (
+                <div className="flex flex-col gap-6 min-h-full p-4 md:p-6">
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
                         <div className="">
                             <table className="min-w-full divide-y divide-gray-200">
@@ -744,13 +735,22 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                                 <div className="flex items-center gap-2">
                                                     {new Date(tx.transaction_date).toLocaleDateString()}
                                                     {user.role === 'admin' && (
-                                                        <button 
-                                                            onClick={() => handleEditTransactionDate(tx)}
-                                                            className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
-                                                            title="Edit Transaction Date"
-                                                        >
-                                                            <Edit size={14} />
-                                                        </button>
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleEditTransactionDate(tx)}
+                                                                className="text-blue-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                                title="Edit Transaction"
+                                                            >
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDeleteTransaction(tx)}
+                                                                className="text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                                title="Delete Transaction"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </td>

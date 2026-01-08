@@ -264,4 +264,39 @@ router.delete('/banks/:id', authenticateToken, (req, res) => {
     });
 });
 
+// Recalculate Balance
+router.post('/banks/:id/recalculate', authenticateToken, (req, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Access denied" });
+    const bankId = req.params.id;
+
+    db.all("SELECT * FROM bank_transactions WHERE bank_account_id = ? ORDER BY transaction_date ASC, id ASC", [bankId], (err, transactions) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        let currentBalance = 0;
+        const promises = transactions.map(t => {
+            const amount = parseFloat(t.amount);
+            if (t.type === 'Deposit') {
+                currentBalance += amount;
+            } else {
+                currentBalance -= amount;
+            }
+            return new Promise((resolve, reject) => {
+                db.run("UPDATE bank_transactions SET running_balance = ? WHERE id = ?", [currentBalance, t.id], (err) => {
+                     if (err) reject(err);
+                     else resolve();
+                });
+            });
+        });
+
+        Promise.all(promises).then(() => {
+            db.run("UPDATE bank_accounts SET current_balance = ? WHERE id = ?", [currentBalance, bankId], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ message: "Balance recalculated successfully", new_balance: currentBalance });
+            });
+        }).catch(err => {
+            res.status(500).json({ error: "Failed to recalculate: " + err.message });
+        });
+    });
+});
+
 module.exports = router;

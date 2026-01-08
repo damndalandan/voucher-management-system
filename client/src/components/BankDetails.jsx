@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from '../api';
-import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X, Edit } from 'lucide-react';
+import { History, BookOpen, ArrowDownLeft, ArrowUpRight, Plus, CheckSquare, FileText, ChevronDown, X, Edit, RefreshCw } from 'lucide-react';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", confirmColor = "green" }) => {
   if (!isOpen) return null;
@@ -337,6 +337,18 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       }
   };
 
+  const handleRecalculate = async () => {
+    try {
+        await axios.post(`/banks/${account.id}/recalculate`);
+        showAlert('Balance Recalculated Successfully', 'success');
+        if (onUpdate) onUpdate(); // Refresh parent stats
+        fetchTransactions(account.id); // Reload transactions
+    } catch (err) {
+        console.error("Recalculation error:", err);
+        showAlert('Recalculation Failed: ' + (err.response?.data?.error || err.message), 'error');
+    }
+  };
+
   const filteredChecks = (checks || []).filter(c => 
     (c.check_number.includes(searchTerm) || 
      c.payee.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -405,9 +417,20 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                 )}
                 <div className={isCompact ? '' : 'mt-6'}>
                     {!isCompact && <p className="text-blue-200 text-sm font-medium uppercase tracking-wider mb-1">Current Balance</p>}
-                    <p className={`${isCompact ? 'text-2xl' : 'text-5xl'} font-bold tracking-tight transition-all`}>
-                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(displayBalance)}
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <p className={`${isCompact ? 'text-2xl' : 'text-5xl'} font-bold tracking-tight transition-all`}>
+                            {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(displayBalance)}
+                        </p>
+                        {!isCompact && (
+                            <button 
+                                onClick={handleRecalculate}
+                                className="opacity-50 hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-white/10 text-white"
+                                title="Recalculate Balance"
+                            >
+                                <RefreshCw size={20} />
+                            </button>
+                        )}
+                    </div>
                 </div>
                 
                 {/* Active Series Widget in Header */}

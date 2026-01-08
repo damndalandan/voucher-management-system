@@ -183,9 +183,14 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           setDisplayBalance(newBal);
 
           // Optimistic Transaction List Update
+          const timestamp = new Date();
+          // If transaction date is today, assume 'now' for sorting purposes
+          const isToday = transactionForm.date === timestamp.toISOString().split('T')[0];
+          const fullDate = isToday ? timestamp.toISOString() : transactionForm.date;
+
           const tempTransaction = {
             id: 'temp-' + Date.now(),
-            transaction_date: transactionForm.date,
+            transaction_date: fullDate,
             check_no: transactionForm.check_no,
             description: transactionForm.description,
             type: transactionForm.type,
@@ -196,7 +201,14 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           setTransactions(prev => [...prev, tempTransaction]);
       }
 
-      await axios.post(`/banks/${account.id}/transaction`, transactionForm);
+      // Send logic: If date matches 'today', send full timestamp to backend to preserve order there too
+      const submitData = { ...transactionForm };
+      const today = new Date().toISOString().split('T')[0];
+      if (submitData.date === today) {
+          submitData.date = new Date().toISOString();
+      }
+
+      await axios.post(`/banks/${account.id}/transaction`, submitData);
       setShowTransactionModal(false);
       setTransactionForm({ 
           type: 'Deposit', 
@@ -336,7 +348,22 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
     (t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
      (t.check_no && t.check_no.includes(searchTerm))) &&
     (!filterDate || t.transaction_date.startsWith(filterDate))
-  ).sort((a, b) => new Date(a.transaction_date) - new Date(b.transaction_date) || a.id - b.id);
+  ).sort((a, b) => {
+    // Sort by date first
+    const dateA = new Date(a.transaction_date);
+    const dateB = new Date(b.transaction_date);
+    
+    // Compare times
+    if (dateA.getTime() !== dateB.getTime()) {
+        return dateA - dateB;
+    }
+    
+    // Fallback to insertion ID (handle temp strings)
+    const idA = typeof a.id === 'string' && a.id.startsWith('temp') ? Number.MAX_SAFE_INTEGER : a.id;
+    const idB = typeof b.id === 'string' && b.id.startsWith('temp') ? Number.MAX_SAFE_INTEGER : b.id;
+    
+    return idA - idB;
+  });
 
   // Auto-scroll to bottom on load/update if showing passbook
   useEffect(() => {

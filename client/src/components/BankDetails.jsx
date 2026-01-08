@@ -174,11 +174,26 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
     try {
       // Optimistic UI Update
       const amount = parseFloat(transactionForm.amount.replace(/,/g, ''));
+      let newBal = displayBalance;
+      
       if (!isNaN(amount)) {
-          const newBal = transactionForm.type === 'Deposit' 
+          newBal = transactionForm.type === 'Deposit' 
               ? displayBalance + amount 
               : displayBalance - amount;
           setDisplayBalance(newBal);
+
+          // Optimistic Transaction List Update
+          const tempTransaction = {
+            id: 'temp-' + Date.now(),
+            transaction_date: transactionForm.date,
+            check_no: transactionForm.check_no,
+            description: transactionForm.description,
+            type: transactionForm.type,
+            category: transactionForm.category,
+            amount: amount,
+            running_balance: newBal
+          };
+          setTransactions(prev => [...prev, tempTransaction]);
       }
 
       await axios.post(`/banks/${account.id}/transaction`, transactionForm);

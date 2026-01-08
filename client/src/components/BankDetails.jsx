@@ -26,6 +26,9 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const [checks, setChecks] = useState([]);
   const [checkbooks, setCheckbooks] = useState([]);
   const [categories, setCategories] = useState([]);
+  
+  // Optimistic Balance State
+  const [displayBalance, setDisplayBalance] = useState(0);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,6 +82,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
 
   useEffect(() => {
     if (account) {
+      setDisplayBalance(account.current_balance || 0);
       fetchTransactions(account.id);
       fetchCheckbooks(account.id);
       fetchChecks(account.id);
@@ -168,6 +172,15 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleTransaction = async (e) => {
     e.preventDefault();
     try {
+      // Optimistic UI Update
+      const amount = parseFloat(transactionForm.amount.replace(/,/g, ''));
+      if (!isNaN(amount)) {
+          const newBal = transactionForm.type === 'Deposit' 
+              ? displayBalance + amount 
+              : displayBalance - amount;
+          setDisplayBalance(newBal);
+      }
+
       await axios.post(`/banks/${account.id}/transaction`, transactionForm);
       setShowTransactionModal(false);
       setTransactionForm({ 
@@ -181,6 +194,9 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       fetchTransactions(account.id);
       if (onUpdate) onUpdate();
     } catch (err) {
+      console.error(err);
+      // Revert optimistic update on error if needed, or rely on next fetch
+      if (account) setDisplayBalance(account.current_balance);
       showAlert('Error recording transaction', 'error');
     }
   };
@@ -348,7 +364,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                 <div className={isCompact ? '' : 'mt-6'}>
                     {!isCompact && <p className="text-blue-200 text-sm font-medium uppercase tracking-wider mb-1">Current Balance</p>}
                     <p className={`${isCompact ? 'text-2xl' : 'text-5xl'} font-bold tracking-tight transition-all`}>
-                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(account.current_balance)}
+                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 10 }).format(displayBalance)}
                     </p>
                 </div>
                 

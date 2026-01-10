@@ -512,40 +512,14 @@ const VoucherDetailsModal = ({ isOpen, onClose, voucher }) => {
   );
 };
 
-const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks, isProcessing }) => {
-  const [checkNo, setCheckNo] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [checkDate, setCheckDate] = useState('');
-
-  useEffect(() => {
-     if (isOpen && voucher) {
-         setCheckNo(voucher.check_no || '');
-         setBankName(voucher.bank_name || '');
-         setCheckDate(voucher.check_date ? voucher.check_date.split('T')[0] : '');
-     }
-  }, [isOpen, voucher]);
-
+const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, isProcessing }) => {
   if (!isOpen || !voucher) return null;
   
   const isLiaison = user?.role === 'liaison';
   const isCheckOrEncashment = voucher.payment_type === 'Check' || voucher.payment_type === 'Encashment';
-  // Always allow Liaison to edit/verify check details during approval
-  const showCheckInputs = isLiaison && isCheckOrEncashment; 
 
   const handleConfirm = () => {
-      if (showCheckInputs) {
-          if (!bankName) {
-              alert("Please select a bank");
-              return;
-          }
-          if (!checkNo) {
-              alert("Please enter a check number");
-              return;
-          }
-          onConfirm({ check_no: checkNo, bank_name: bankName, check_date: checkDate || null });
-      } else {
-          onConfirm();
-      }
+      onConfirm();
   };
 
   return (
@@ -630,7 +604,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks,
                             <div className="font-medium text-sm text-gray-900">{voucher.payment_type}</div>
                         </div>
                         
-                        {(isCheckOrEncashment && !showCheckInputs && (voucher.check_no || voucher.bank_name)) && (
+                        {(isCheckOrEncashment && (voucher.check_no || voucher.bank_name)) && (
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-3">
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Bank</label>
@@ -651,58 +625,6 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, banks,
                                     <div className="font-medium text-sm text-gray-900">{voucher.check_date ? 'Post Dated Check' : 'Standard Check'}</div>
                                 </div>
                             </div>
-                        )}
-
-                        {showCheckInputs && (
-                             <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-4 animate-fade-in">
-                                <h5 className="font-bold text-orange-800 text-xs flex items-center gap-1.5 uppercase tracking-wider">
-                                    <AlertTriangle size={12} /> Action Required
-                                </h5>
-                                
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Bank Account</label>
-                                    <select 
-                                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-                                        value={bankName}
-                                        onChange={(e) => {
-                                            const selected = e.target.value;
-                                            setBankName(selected);
-                                            const bank = banks.find(b => b.bank_name === selected);
-                                            if (bank && bank.next_check_no) {
-                                                setCheckNo(bank.next_check_no);
-                                            }
-                                        }}
-                                    >
-                                        <option value="">Select Bank</option>
-                                        {(banks || []).filter(b => !b.company_id || b.company_id == voucher.company_id).map(b => (
-                                            <option key={b.id} value={b.bank_name}>{b.bank_name} ({b.account_number})</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Check Number</label>
-                                        <input 
-                                            type="text" 
-                                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                            placeholder="0000000000"
-                                            value={checkNo}
-                                            onChange={(e) => setCheckNo(e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Check Date (PDC)</label>
-                                        <input 
-                                            type="date"
-                                            className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" 
-                                            value={checkDate}
-                                            onChange={(e) => setCheckDate(e.target.value)}
-                                            title="Leave empty for Standard Check"
-                                        />
-                                    </div>
-                                </div>
-                             </div>
                         )}
                     </div>
                 </div>
@@ -2691,9 +2613,6 @@ const Dashboard = ({ user, onLogout }) => {
                         <div className="flex justify-center gap-0.5 items-center">
                             <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                 <Edit size={18} />
-                            </button>
-                            <button onClick={() => handleApprove(voucher)} className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors" title="Approve">
-                                <CheckCircle size={18} />
                             </button>
                             {voucher.history_count > 0 && (
                                 <button onClick={() => setViewingHistory(voucher)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View History">

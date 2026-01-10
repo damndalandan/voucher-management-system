@@ -267,6 +267,13 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           return;
       }
       setShowClaimModal(false); // Close immediately
+
+      // Optimistic Update
+      const oldChecks = [...checks];
+      setChecks(prev => prev.map(c => 
+        c.id === selectedCheckId ? { ...c, status: 'Claimed', received_by: receivedByName } : c
+      ));
+
       try {
           await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Claimed',
@@ -276,6 +283,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           if (onUpdate) onUpdate(); // Refresh parent stats if needed
           showAlert('Check marked as claimed', 'success');
       } catch (err) {
+          setChecks(oldChecks); // Revert on error
           showAlert('Error marking check as claimed', 'error');
       }
   };
@@ -283,6 +291,13 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleConfirmClear = async (e) => {
       e.preventDefault();
       setShowClearModal(false); // Close immediately
+      
+      // Optimistic Update
+      const oldChecks = [...checks];
+      setChecks(prev => prev.map(c => 
+        c.id === selectedCheckId ? { ...c, status: 'Cleared', date_cleared: clearDate } : c
+      ));
+
       try {
           await axios.post(`/checks/${selectedCheckId}/status`, { 
               status: 'Cleared',
@@ -292,6 +307,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
           fetchTransactions(account.id);
           if (onUpdate) onUpdate();
       } catch (err) {
+          setChecks(oldChecks); // Revert on error
           showAlert('Error clearing check', 'error');
       }
   };

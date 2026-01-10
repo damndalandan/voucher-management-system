@@ -81,6 +81,12 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
+      if (searchTerm) {
+          setIsCompact(true);
+      }
+  }, [searchTerm]);
+
+  useEffect(() => {
     if (account) {
       setDisplayBalance(account.current_balance || 0);
       fetchTransactions(account.id);
@@ -95,6 +101,9 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const activeCheckbook = checkbooks.find(cb => cb.status === 'Active');
 
   const handleTableScroll = (e) => {
+      // Do not toggle compact mode on scroll if a search is active
+      if (searchTerm) return;
+
       const scrollTop = e.target.scrollTop;
       // Threshold set to 150px (approx height of card) to ensure it's scrolled out before shrinking header
       if (scrollTop > 150 && !isCompact) {
@@ -615,7 +624,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider first:rounded-tl-xl">Date Issued</th>
                                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">PDC Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Check No</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Check No</th>
                                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Payee / Description</th>
                                         <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
                                         <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>

@@ -30,10 +30,13 @@ router.post('/checks/:id/status', authenticateToken, (req, res) => {
                                 if (err) console.error("Error inserting transaction:", err);
                             });
                         db.run("UPDATE checks SET status = 'Cleared', date_cleared = ? WHERE id = ?", [transactionDate, id], (err) => {
-                            if (err) console.error("Error updating check status:", err);
+                            if (err) {
+                                console.error("Error updating check status:", err);
+                                return res.status(500).json({ error: err.message });
+                            }
+                            res.json({ message: "Check cleared and balance updated" });
                         });
                     });
-                    res.json({ message: "Check cleared and balance updated" });
                 });
             });
         } else if (status === 'Bounced') {

@@ -540,22 +540,22 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, isProc
         
         <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
             {/* Header Info */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Voucher No</label>
-                    <div className="font-mono font-bold text-gray-900">{voucher.voucher_no}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Voucher No</label>
+                    <div className="font-mono font-bold text-sm text-gray-900">{voucher.voucher_no}</div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
-                    <div className="font-medium text-gray-900">{new Date(voucher.date).toLocaleDateString()}</div>
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Date</label>
+                    <div className="font-medium text-sm text-gray-900">{new Date(voucher.date).toLocaleDateString()}</div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Created By</label>
-                    <div className="font-medium text-gray-900 truncate">{voucher.created_by_name || voucher.created_by_user || 'System'}</div>
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Created By</label>
+                    <div className="font-medium text-sm text-gray-900 truncate" title={voucher.created_by_name || voucher.created_by_user || 'System'}>{voucher.created_by_name || voucher.created_by_user || 'System'}</div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Certified By</label>
-                    <div className="font-medium text-gray-900 truncate">{voucher.certified_by || '-'}</div>
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Certified By</label>
+                    <div className="font-medium text-sm text-gray-900 truncate" title={voucher.certified_by || '-'}>{voucher.certified_by || '-'}</div>
                 </div>
             </div>
 
@@ -599,10 +599,12 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, isProc
                         <CreditCard size={16} className="text-gray-500" /> Payment Details
                     </h4>
                     <div className="space-y-3">
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Payment Type</label>
-                            <div className="font-medium text-sm text-gray-900">{voucher.payment_type}</div>
-                        </div>
+                        {!(isCheckOrEncashment && (voucher.check_no || voucher.bank_name)) && (
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Payment Type</label>
+                                <div className="font-medium text-sm text-gray-900">{voucher.payment_type}</div>
+                            </div>
+                        )}
                         
                         {(isCheckOrEncashment && (voucher.check_no || voucher.bank_name)) && (
                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 space-y-3">

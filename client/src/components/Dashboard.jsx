@@ -1031,8 +1031,21 @@ const Dashboard = ({ user, onLogout }) => {
   const [urgentVouchers, setUrgentVouchers] = useState([]);
   const [urgentSort, setUrgentSort] = useState('date'); // 'date' or 'urgency'
   const [stats, setStats] = useState(null);
-  const [banks, setBanks] = useState([]);
-  const [companies, setCompanies] = useState([]);
+  
+  // Initialize from LocalStorage for instant load
+  const [banks, setBanks] = useState(() => {
+      try {
+          const saved = localStorage.getItem('dashboard_banks');
+          return saved ? JSON.parse(saved) : [];
+      } catch (e) { return []; }
+  });
+  const [companies, setCompanies] = useState(() => {
+      try {
+          const saved = localStorage.getItem('dashboard_companies');
+          return saved ? JSON.parse(saved) : [];
+      } catch (e) { return []; }
+  });
+
   const [categories, setCategories] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
@@ -1610,9 +1623,10 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       const res = await axios.get(`/banks?company_id=${user.company_id || ''}`);
       setBanks(res.data || []);
+      localStorage.setItem('dashboard_banks', JSON.stringify(res.data || []));
     } catch (err) {
       console.error("Error fetching banks", err);
-      setBanks([]);
+      // Do not clear banks on error to keep cached data visible
     }
   };
 
@@ -1620,9 +1634,10 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       const res = await axios.get('/companies');
       setCompanies(res.data || []);
+      localStorage.setItem('dashboard_companies', JSON.stringify(res.data || []));
     } catch (err) {
       console.error("Error fetching companies", err);
-      setCompanies([]);
+      // Do not clear companies on error
     }
   };
 

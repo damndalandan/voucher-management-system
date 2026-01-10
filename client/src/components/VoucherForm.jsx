@@ -285,7 +285,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
   if (isLiaisonProcessing) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
           {/* Header */}
           <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
@@ -308,52 +308,67 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                 
                 {/* Left Column: Voucher Summary */}
                 <div className="md:col-span-7 space-y-4">
-                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Pay To</h3>
-                                <div className="text-lg font-bold text-gray-900 leading-tight">{formData.payee}</div>
+                     <div className="relative overflow-hidden bg-white rounded-xl border border-gray-200 shadow-sm transition-shadow hover:shadow-md">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
+                        
+                        {/* Check-like Header */}
+                        <div className="p-5 pl-7 border-b border-gray-100 border-dashed">
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="flex-1">
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <User size={12} /> Pay To The Order Of
+                                    </h3>
+                                    <div className="text-xl md:text-2xl font-bold text-gray-900 font-serif leading-tight border-b-2 border-gray-100 pb-1 w-full">
+                                        {formData.payee}
+                                    </div>
+                                </div>
+                                <div className="ml-4 text-right">
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Date</h3>
+                                    <div className="text-sm font-bold text-gray-900 font-mono">
+                                        {formData.date}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-right">
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Amount</h3>
-                                <div className="text-xl font-bold text-gray-900 font-mono text-blue-600">
-                                    {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(formData.amount)}
+                            
+                            <div className="flex justify-between items-end">
+                                <div>
+                                     <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Amount</h3>
+                                     <div className="text-2xl font-bold text-blue-600 font-mono tracking-tight">
+                                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(formData.amount)}
+                                     </div>
+                                     <div className="text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-wider">
+                                        {formData.amount_in_words || 'Philippine Peso'}
+                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-gray-200 mb-3">
-                            <div>
-                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Issued Date</span>
-                                <div className="font-medium text-xs text-gray-900">{formData.date}</div>
-                            </div>
-                            <div>
-                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Created By</span>
-                                <div className="font-medium text-xs text-gray-900">{initialData?.created_by_name || 'System'}</div>
-                            </div>
-                            <div>
-                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Category</span>
-                                <div className="font-medium text-xs text-gray-900">{formData.category}</div>
-                            </div>
-                            <div>
-                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Urgency</span>
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                    formData.urgency === 'Critical' ? 'bg-red-100 text-red-800' :
-                                    formData.urgency === 'Urgent' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-green-100 text-green-800'
-                                }`}>
-                                    {formData.urgency}
-                                </span>
-                            </div>
+                        {/* Details Strip */}
+                        <div className="bg-gray-50/50 p-4 pl-7 text-xs">
+                             <div className="grid grid-cols-2 gap-4 mb-3">
+                                <div>
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Category</span>
+                                    <span className="inline-block bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-medium">{formData.category}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Urgency</span>
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                        formData.urgency === 'Critical' ? 'bg-red-100 text-red-800' :
+                                        formData.urgency === 'Urgent' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-green-100 text-green-800'
+                                    }`}>
+                                        {formData.urgency}
+                                    </span>
+                                </div>
+                             </div>
+                             <div>
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</span>
+                                <div className="text-gray-600 italic leading-relaxed line-clamp-3">
+                                    "{formData.description || 'No description provided'}"
+                                </div>
+                             </div>
                         </div>
-
-                        <div>
-                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</span>
-                            <div className="text-xs text-gray-600 bg-white p-3 rounded-lg border border-gray-200 whitespace-pre-wrap max-h-[120px] overflow-y-auto custom-scrollbar">
-                                {formData.description || 'No description provided.'}
-                            </div>
-                        </div>
-                    </div>
+                     </div>
 
                     {/* Attachments Compact View */}
                     {(existingAttachments.length > 0) && (
@@ -380,33 +395,28 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
 
                 {/* Right Column: Issuance Form */}
                 <div className="md:col-span-5">
-                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 h-full">
+                    <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100 h-full flex flex-col">
                         <h3 className="text-blue-800 text-xs font-bold mb-4 flex items-center gap-2 uppercase tracking-wider border-b border-blue-100 pb-2">
                             <CreditCard size={14} /> Issuance Details
                         </h3>
                         
-                        <div className="space-y-4">
-                            <CustomSelect 
-                                label="Payment Type" 
-                                icon={CreditCard}
-                                name="payment_type" 
-                                disabled={true}
-                                value={formData.payment_type} 
-                                onChange={handleChange}
-                                className="bg-white"
-                            >
-                                <option value="Encashment">Encashment</option>
-                                <option value="Check">Check</option>
-                            </CustomSelect>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Payment Method</label>
+                                <div className="bg-white border border-gray-200 text-gray-700 text-xs rounded-lg px-3 py-2 font-medium flex justify-between items-center">
+                                    <span>{formData.payment_type}</span>
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                </div>
+                            </div>
 
                             <CustomSelect 
                                 label="Bank Name" 
-                                icon={Building}
-                                name="bank_name" 
+                                icon={Building} 
+                                name="bank_name"
                                 required
                                 value={formData.bank_name} 
                                 onChange={handleBankChange}
-                                className="bg-white"
+                                className="bg-white py-2 text-xs"
                             >
                                 <option value="">Select Bank</option>
                                 {banks.map(bank => (
@@ -426,7 +436,7 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                                         name="check_no" 
                                         required
                                         disabled={!canEditCheckNo}
-                                        className={`w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition-all font-mono ${!canEditCheckNo ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                        className={`w-full bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3 py-2 transition-all font-mono ${!canEditCheckNo ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                         value={formData.check_no} 
                                         onChange={handleChange} 
                                         placeholder="0000000000"
@@ -437,27 +447,30 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
                                 </div>
                             </div>
 
-                            <CustomInput 
-                                type="date" 
-                                label="Date Check Issued" 
-                                icon={Calendar}
-                                name="check_issued_date" 
-                                required={isLiaisonProcessing}
-                                value={formData.check_issued_date} 
-                                onChange={handleChange} 
-                                className="bg-white"
-                            />
-
-                             <CustomInput 
-                                type="date" 
-                                label="Check Date (PDC)" 
-                                icon={Calendar}
-                                name="check_date" 
-                                value={formData.check_date} 
-                                onChange={handleChange} 
-                                title="Leave empty for Standard Check"
-                                className="bg-white"
-                            />
+                            <div className="grid grid-cols-2 gap-2 pt-2">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Issue Date</label>
+                                    <input 
+                                        type="date"
+                                        name="check_issued_date"
+                                        required={isLiaisonProcessing}
+                                        value={formData.check_issued_date}
+                                        onChange={handleChange}
+                                        className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-2 py-2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">PDC Date</label>
+                                    <input 
+                                        type="date"
+                                        name="check_date"
+                                        value={formData.check_date}
+                                        onChange={handleChange}
+                                        className="w-full bg-white border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-2 py-2"
+                                        title="Leave empty for Standard Check"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

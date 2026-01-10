@@ -105,10 +105,11 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       if (searchTerm) return;
 
       const scrollTop = e.target.scrollTop;
-      // Threshold set to 120px to ensure it's scrolled out before shrinking header
-      if (scrollTop > 120 && !isCompact) {
+      
+      // Threshold logic for shrinking/expanding header
+      if (scrollTop > 50 && !isCompact) {
           setIsCompact(true);
-      } else if (scrollTop < 80 && isCompact) {
+      } else if (scrollTop < 20 && isCompact) {
           setIsCompact(false);
       }
   };

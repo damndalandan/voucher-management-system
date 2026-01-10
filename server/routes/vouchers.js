@@ -261,31 +261,15 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), asy
                     db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
                         [voucherId, created_by, 'Created', 'Voucher created']);
 
-                    if (status === 'Issued' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
+                    if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                             if (!err && account) {
+                                const checkStatus = status === 'Issued' ? 'Issued' : 'Pending';
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
-                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount],
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount, checkStatus],
                                         (err) => {
                                             if (err) console.error("Error inserting check:", err.message);
-                                            db.run(`UPDATE checkbooks 
-                                                    SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
-                                                    WHERE bank_account_id = ? 
-                                                    AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
-                                                    AND status = 'Active'`, 
-                                                    [check_no, check_no, account.id, check_no]);
-                                        });
-                            }
-                        });
-                    } else if (status === 'Pending Admin' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
-                        db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
-                            if (!err && account) {
-                                db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount],
-                                        (err) => {
-                                            if (err) console.error("Error inserting pending check:", err.message);
                                             db.run(`UPDATE checkbooks 
                                                     SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
                                                     WHERE bank_account_id = ? 
@@ -306,7 +290,7 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), asy
                 });
             };
 
-            if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
+            if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                 db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                     if (err || !account) {
                         return insertVoucher();
@@ -606,7 +590,7 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                 }
             };
 
-            if ((status === 'Issued' || status === 'Pending Admin') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
+            if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
                 db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                     if (err) return res.status(500).json({ error: "Database error fetching bank account: " + err.message });
                     if (!account) return res.status(404).json({ error: `Bank account '${bank_name}' not found` });

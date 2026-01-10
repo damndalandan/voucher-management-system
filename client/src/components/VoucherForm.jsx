@@ -278,7 +278,8 @@ const VoucherForm = ({ user, initialData, onSuccess, onCancel, showAlert }) => {
   const canSelectCompany = ['hr', 'liaison', 'admin'].includes(user.role) && !initialData; // Only on creation
   
   // Liaison can edit check details, but check_no is restricted if status is 'Issued' (Admin Approved)
-  const canEditCheckDetails = user.role === 'liaison' || user.role === 'admin' || user.role === 'hr';
+  // HR is removed from here as they should not assign bank details
+  const canEditCheckDetails = user.role === 'liaison' || user.role === 'admin';
   const canEditCheckNo = canEditCheckDetails && !(user.role === 'liaison' && initialData?.status === 'Issued');
 
   // Disabled specialized view to allow full editing for Liaison

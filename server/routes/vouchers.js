@@ -502,6 +502,10 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
              status = 'Pending Admin';
         }
 
+        if (role === 'hr' && currentVoucher.status !== 'Pending Liaison') {
+             return res.status(403).json({ error: "HR can only edit vouchers pending liaison approval" });
+        }
+
         if (role === 'staff') {
             if (check_no && check_no !== currentVoucher.check_no) return res.status(403).json({ error: "Staff cannot edit check number" });
             if (bank_name && bank_name !== currentVoucher.bank_name) return res.status(403).json({ error: "Staff cannot edit bank name" });

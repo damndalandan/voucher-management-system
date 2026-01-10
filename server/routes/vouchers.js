@@ -590,7 +590,8 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                 }
             };
 
-            if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name && (status !== currentVoucher.status || check_no !== currentVoucher.check_no)) {
+            // Always check for check consistency if payment type is Check/Encashment and we have details
+            if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
                 db.get("SELECT id, current_balance FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                     if (err) return res.status(500).json({ error: "Database error fetching bank account: " + err.message });
                     if (!account) return res.status(404).json({ error: `Bank account '${bank_name}' not found` });
@@ -605,6 +606,10 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                                     [account.id, id, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee || currentVoucher.payee, description || currentVoucher.description, amount || currentVoucher.amount, checkStatus],
                                     function(err) {
                                         if (err) {
+                                            // Ignore unique constraint error if we are just "healing" and it turns out the check number is used elsewhere?
+                                            // No, if it's used elsewhere, we shouldn't steal it unless we are sure.
+                                            // The user says "mark the check as used already". 
+                                            // If check number is used by ANOTHER voucher, we should error.
                                             if (err.message.includes('UNIQUE constraint failed')) {
                                                 return res.status(400).json({ error: `Check number ${check_no} is already used for this bank.` });
                                             }
@@ -629,6 +634,14 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
                                         }
                                         return res.status(500).json({ error: "Error updating check: " + err.message });
                                     }
+                                    
+                                    db.run(`UPDATE checkbooks 
+                                            SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
+                                            WHERE bank_account_id = ? 
+                                            AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
+                                            AND status = 'Active'`, 
+                                            [check_no, check_no, account.id, check_no]);
+
                                     executeUpdate();
                                 });
                             } else {

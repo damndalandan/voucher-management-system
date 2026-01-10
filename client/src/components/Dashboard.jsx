@@ -706,7 +706,7 @@ const ApproveVoucherModal = ({ isOpen, onClose, onConfirm, voucher, user, isProc
                 ) : (
                     <>
                         <CheckCircle size={18} />
-                        {showCheckInputs ? 'Submit for Admin Approval' : 'Confirm Approval'}
+                        {isLiaison ? 'Submit for Admin Approval' : 'Confirm Approval'}
                     </>
                 )}
             </button>
@@ -2623,6 +2623,9 @@ const Dashboard = ({ user, onLogout }) => {
                     )}
                     {user.role === 'liaison' && voucher.status === 'Pending Admin' && (
                         <div className="flex justify-center gap-0.5 items-center">
+                            <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                <Edit size={18} />
+                            </button>
                             <button onClick={() => handleApprove(voucher)} className="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors" title="Approve">
                                 <CheckCircle size={18} />
                             </button>

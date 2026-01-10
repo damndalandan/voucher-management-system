@@ -111,7 +111,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
     const { company_id, filter_type, filter_value, search, category } = req.query; 
     const { role } = req.user;
 
-    let sql = `SELECT v.*, c.name as company_name, u.username as created_by_user, u.full_name as created_by_name,
+    let sql = `SELECT v.*, c.name as company_name, u.username as created_by_user, u.full_name as created_by_name, u.role as created_by_role,
                GROUP_CONCAT(CAST(va.id AS TEXT), '||') as attachment_ids,
                GROUP_CONCAT(va.file_path, '||') as attachment_paths,
                GROUP_CONCAT(va.original_name, '||') as attachment_names,
@@ -197,7 +197,7 @@ router.get('/vouchers', authenticateToken, (req, res) => {
         sql += ` WHERE ` + conditions.join(' AND ');
     }
 
-    sql += ` GROUP BY v.id, c.name, u.username, u.full_name ORDER BY v.created_at DESC`; // Added group by fields for Postgres strictness
+    sql += ` GROUP BY v.id, c.name, u.username, u.full_name, u.role ORDER BY v.created_at DESC`; // Added group by fields for Postgres strictness
 
     db.all(sql, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -207,18 +207,19 @@ router.get('/vouchers', authenticateToken, (req, res) => {
 
 // Create Voucher
 router.post('/vouchers', authenticateToken, upload.array('attachments', 50), async (req, res) => {
-    const { company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, urgency, deadline_date, is_pdc, check_date, check_issued_date } = req.body;
-    const { role, id: created_by } = req.user;
+    const { 
+        company_id, date, payee, description, amount, amount_in_words, 
+        payment_type, check_no, bank_name, category, urgency, deadline_date, is_pdc, 
+        check_date, check_issued_date, status: initialStatus 
+    } = req.body;
     
-    if (!company_id) return res.status(400).json({ error: "Company ID is required" });
+    // Default status if not provided
+    const status = initialStatus || 'Pending Admin';
 
-    let status = 'Issued';
-    if (role === 'staff' || role === 'hr') {
-        status = 'Pending Liaison';
-    } else if (role === 'liaison') {
-        status = (payment_type === 'Check' || payment_type === 'Encashment') ? 'Pending Admin' : 'Issued';
-    } else if (role === 'admin') {
-        status = 'Issued';
+    const { id: user_id, role } = req.user;
+
+    if (!company_id || !amount || !payee || !date || !payment_type) {
+        return res.status(400).json({ error: "Missing required fields" });
     }
 
     db.get("SELECT prefix FROM companies WHERE id = ?", [company_id], async (err, company) => {
@@ -226,66 +227,82 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), asy
 
         const prefix = company.prefix;
 
-        db.get("SELECT count(*) as count FROM vouchers WHERE company_id = ?", [company_id], async (err, row) => {
+        // Fix: Use ORDER BY id DESC to get the last voucher number instead of count(*)
+        // This prevents the bug where string coercion ("1"+1="11") or deletions caused sequence jumps
+        db.get("SELECT voucher_no FROM vouchers WHERE company_id = ? ORDER BY id DESC LIMIT 1", [company_id], async (err, lastVoucher) => {
             if (err) return res.status(500).json({ error: err.message });
+
+            let nextNum = 1;
+            if (lastVoucher && lastVoucher.voucher_no) {
+                const parts = lastVoucher.voucher_no.split('-');
+                if (parts.length === 2) {
+                    const lastSeq = parseInt(parts[1], 10);
+                    if (!isNaN(lastSeq)) {
+                        nextNum = lastSeq + 1;
+                    }
+                }
+            }
             
-            const nextNum = (row.count || 0) + 1;
             const sequence = String(nextNum).padStart(5, '0');
             const voucher_no = `${prefix}-${sequence}`;
 
             const insertVoucher = async () => {
-                const sql = `INSERT INTO vouchers (voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency, deadline_date, is_pdc, check_date, check_issued_date) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-                
-                const params = [voucher_no, company_id, date, payee, description, amount, amount_in_words, payment_type, check_no, bank_name, category, created_by, status, urgency || 'Normal', deadline_date, (is_pdc === 'true' || is_pdc === '1' || is_pdc === 1) ? 1 : 0, check_date, check_issued_date];
+                const sql = `INSERT INTO vouchers (
+                    voucher_no, company_id, date, payee, description, amount, amount_in_words, 
+                    payment_type, check_no, bank_name, category, status, created_by, 
+                    urgency, deadline_date, is_pdc, check_date, check_issued_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+                const params = [
+                    voucher_no, company_id, date, payee, description, amount, amount_in_words,
+                    payment_type, check_no, bank_name, category, status, user_id,
+                    urgency, deadline_date, is_pdc ? 1 : 0, check_date, check_issued_date
+                ];
 
                 db.run(sql, params, async function(err) {
                     if (err) return res.status(500).json({ error: err.message });
-                    
                     const voucherId = this.lastID;
 
+                    // Attachments
                     if (req.files && req.files.length > 0) {
-                        try {
-                            for (const file of req.files) {
-                                const url = await handleFileUpload(file);
-                                if (url) {
-                                    db.run("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)",
-                                        [voucherId, url, file.originalname]);
-                                }
+                        for (const file of req.files) {
+                            const url = await handleFileUpload(file);
+                            if (url) {
+                                db.run("INSERT INTO voucher_attachments (voucher_id, file_path, original_name) VALUES (?, ?, ?)", 
+                                    [voucherId, url, file.originalname]);
                             }
-                        } catch (e) {
-                            console.error("Upload error", e);
                         }
                     }
 
+                    // History
                     db.run("INSERT INTO voucher_history (voucher_id, user_id, action, details) VALUES (?, ?, ?, ?)",
-                        [voucherId, created_by, 'Created', 'Voucher created']);
+                        [voucherId, user_id, 'Created', `Voucher created with status ${status}`]);
 
-                    if ((status === 'Issued' || status === 'Pending Admin' || status === 'Pending Liaison') && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
-                        db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
+                    // If Issued and Check, insert check logic
+                    if (status === 'Issued' && (payment_type === 'Check' || payment_type === 'Encashment') && check_no && bank_name) {
+                         db.get("SELECT id FROM bank_accounts WHERE bank_name = ?", [bank_name], (err, account) => {
                             if (!err && account) {
-                                const checkStatus = status === 'Issued' ? 'Issued' : 'Pending';
                                 db.run(`INSERT INTO checks (bank_account_id, voucher_id, check_number, check_date, date_issued, payee, description, amount, status) 
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                                        [account.id, voucherId, check_no, check_date || null, check_issued_date || new Date().toISOString(), payee, description, amount, checkStatus],
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Issued')`,
+                                        [account.id, voucherId, check_no, check_date, check_issued_date || new Date().toISOString(), payee, description, amount],
                                         (err) => {
-                                            if (err) console.error("Error inserting check:", err.message);
-                                            db.run(`UPDATE checkbooks 
-                                                    SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
-                                                    WHERE bank_account_id = ? 
-                                                    AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
-                                                    AND status = 'Active'`, 
-                                                    [check_no, check_no, account.id, check_no]);
+                                            if (!err) {
+                                                 db.run(`UPDATE checkbooks 
+                                                        SET next_check_no = CASE WHEN CAST(? AS INTEGER) >= next_check_no THEN CAST(? AS INTEGER) + 1 ELSE next_check_no END
+                                                        WHERE bank_account_id = ? 
+                                                        AND CAST(? AS INTEGER) BETWEEN series_start AND series_end 
+                                                        AND status = 'Active'`, 
+                                                        [check_no, check_no, account.id, check_no]);
+                                            }
                                         });
                             }
-                        });
+                         });
                     }
 
-                    res.json({ 
-                        id: voucherId, 
-                        voucher_no, 
-                        status,
-                        message: "Voucher created successfully" 
+                    res.json({
+                        message: "Voucher created successfully",
+                        voucher_id: voucherId,
+                        voucher_no: voucher_no
                     });
                 });
             };
@@ -478,7 +495,7 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
     
     const { role, id: user_id } = req.user;
 
-    db.get("SELECT * FROM vouchers WHERE id = ?", [id], (err, currentVoucher) => {
+    db.get("SELECT v.*, u.role as created_by_role FROM vouchers v LEFT JOIN users u ON v.created_by = u.id WHERE v.id = ?", [id], (err, currentVoucher) => {
         if (err) return res.status(500).json({ error: "Database error fetching voucher: " + err.message });
         if (!currentVoucher) return res.status(404).json({ error: "Voucher not found" });
 
@@ -491,6 +508,9 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
         }
 
         if (role === 'staff') {
+            if (currentVoucher.created_by_role === 'hr') {
+                return res.status(403).json({ error: "Staff cannot edit vouchers created by HR" });
+            }
             if (check_no && check_no !== currentVoucher.check_no) return res.status(403).json({ error: "Staff cannot edit check number" });
             if (bank_name && bank_name !== currentVoucher.bank_name) return res.status(403).json({ error: "Staff cannot edit bank name" });
         } else if (role === 'liaison') {

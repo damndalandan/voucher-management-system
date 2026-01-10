@@ -2650,7 +2650,7 @@ const Dashboard = ({ user, onLogout }) => {
                             )}
                         </div>
                     )}
-                    {user.role === 'staff' && voucher.status === 'Pending Liaison' && (
+                    {user.role === 'staff' && voucher.status === 'Pending Liaison' && voucher.created_by_role !== 'hr' && (
                         <div className="flex gap-0.5 justify-center items-center">
                             <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                 <Edit size={18} />

@@ -81,9 +81,7 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
-      if (searchTerm) {
-          setIsCompact(true);
-      }
+      setIsCompact(!!searchTerm);
   }, [searchTerm]);
 
   useEffect(() => {
@@ -101,16 +99,8 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const activeCheckbook = checkbooks.find(cb => cb.status === 'Active');
 
   const handleTableScroll = (e) => {
-      // Do not toggle compact mode on scroll if a search is active
-      if (searchTerm) return;
-
-      const scrollTop = e.target.scrollTop;
-      // Threshold set to 120px to ensure it's scrolled out before shrinking header
-      if (scrollTop > 120 && !isCompact) {
-          setIsCompact(true);
-      } else if (scrollTop < 80 && isCompact) {
-          setIsCompact(false);
-      }
+      // Auto-shrink on scroll removed to prevent flickering issues.
+      // Compact mode is now controlled solely by search activity.
   };
 
   const fetchCategories = async (companyId) => {
@@ -282,16 +272,57 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
   const handleConfirmClear = async (e) => {
       e.preventDefault();
       setShowClearModal(false); // Close immediately
-      try {
-          await axios.post(`/checks/${selectedCheckId}/status`, { 
-              status: 'Cleared',
-              date: clearDate 
-          });
-          fetchChecks(account.id);
-          fetchTransactions(account.id);
-          if (onUpdate) onUpdate();
-      } catch (err) {
-          showAlert('Error clearing check', 'error');
+
+      // Optimistic Update Preparation
+      const checkToClear = checks.find(c => c.id === selectedCheckId);
+      const originalBalance = displayBalance;
+      const originalTransactions = [...transactions];
+      const originalChecks = [...checks];
+
+      if (checkToClear) {
+          try {
+              // 1. Optimistic Balance Update
+              const newBalance = displayBalance - checkToClear.amount;
+              setDisplayBalance(newBalance);
+
+              // 2. Optimistic Checks Update
+              setChecks(prev => prev.map(c => 
+                  c.id === selectedCheckId 
+                      ? { ...c, status: 'Cleared', date_cleared: clearDate } 
+                      : c
+              ));
+
+              // 3. Optimistic Transaction Update
+              const tempTransaction = {
+                  id: 'temp-clear-' + Date.now(),
+                  transaction_date: clearDate || new Date().toISOString(),
+                  check_no: checkToClear.check_number,
+                  description: `Check Cleared: ${checkToClear.payee}`,
+                  type: 'Withdrawal',
+                  category: 'Check Issuance', // Placeholder until refresh
+                  amount: checkToClear.amount,
+                  running_balance: newBalance
+              };
+              setTransactions(prev => [...prev, tempTransaction]);
+
+              // 4. Perform API Call
+              await axios.post(`/checks/${selectedCheckId}/status`, { 
+                  status: 'Cleared',
+                  date: clearDate 
+              });
+              
+              // 5. Background Refresh
+              fetchChecks(account.id);
+              fetchTransactions(account.id);
+              if (onUpdate) onUpdate();
+          } catch (err) {
+              console.error("Error clearing check:", err);
+              // Revert optimistic updates
+              setDisplayBalance(originalBalance);
+              setTransactions(originalTransactions);
+              setChecks(originalChecks);
+              showAlert('Error clearing check', 'error');
+          }
       }
   };
 

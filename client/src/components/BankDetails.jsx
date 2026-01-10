@@ -105,20 +105,10 @@ const BankDetails = ({ account, user, onUpdate, showAlert }) => {
       if (searchTerm) return;
 
       const scrollTop = e.target.scrollTop;
-      // Threshold set to 150px (approx height of card) to ensure it's scrolled out before shrinking header
-      if (scrollTop > 150 && !isCompact) {
+      // Threshold set to 120px to ensure it's scrolled out before shrinking header
+      if (scrollTop > 120 && !isCompact) {
           setIsCompact(true);
-          // Auto-scroll to bottom when card shrinks (showing most recent)
-          if (scrollContainerRef.current) {
-              setTimeout(() => {
-                  const { scrollHeight, clientHeight } = scrollContainerRef.current;
-                  scrollContainerRef.current.scrollTo({
-                      top: scrollHeight - clientHeight,
-                      behavior: 'smooth'
-                  });
-              }, 100);
-          }
-      } else if (scrollTop < 100 && isCompact) {
+      } else if (scrollTop < 80 && isCompact) {
           setIsCompact(false);
       }
   };

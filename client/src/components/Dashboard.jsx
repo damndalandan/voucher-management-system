@@ -2732,6 +2732,21 @@ const Dashboard = ({ user, onLogout }) => {
                             )}
                         </div>
                     )}
+                    {user.role === 'hr' && voucher.status === 'Pending Liaison' && voucher.created_by === user.id && (
+                        <div className="flex gap-0.5 justify-center items-center">
+                            <button onClick={() => handleProcess(voucher)} className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                <Edit size={18} />
+                            </button>
+                            <button onClick={() => handleCancelVoucher(voucher.id)} className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Cancel">
+                                <X size={18} />
+                            </button>
+                            {voucher.history_count > 0 && (
+                                <button onClick={() => setViewingHistory(voucher)} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View History">
+                                    <Clock size={18} />
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {voucher.status === 'Issued' && (
                         <div className="flex justify-center gap-0.5 items-center">
                             <button onClick={() => handlePrint(voucher)} className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Print">

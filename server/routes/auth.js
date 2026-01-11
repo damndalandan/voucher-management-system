@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { db } = require('../database');
 const { SECRET_KEY } = require('../config');
-const { logAction } = require('../services/audit');
 
 // Login Endpoint
 router.post('/login', (req, res) => {
@@ -38,10 +37,6 @@ router.post('/login', (req, res) => {
             const hashedPassword = await bcrypt.hash(password, 10);
             db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, user.id]);
         }
-
-        // Log Login
-        req.user = user; // Set for logging context
-        logAction(req, 'Login', 'User', user.id, 'User logged in successfully');
 
         const token = jwt.sign({ 
             id: user.id, 

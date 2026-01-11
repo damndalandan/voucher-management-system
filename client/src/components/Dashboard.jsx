@@ -4,18 +4,12 @@ import {
   LogOut, Plus, Printer, RefreshCw, CheckCircle, Search, Filter, Calendar, X, 
   TrendingUp, Clock, FileCheck, Building, Settings, Edit, CreditCard, AlertTriangle,
   LayoutDashboard, FileText, ChevronDown, ChevronRight, ChevronLeft, User, Menu,
-  Trash2, UserPlus, Save, Download, Upload, Database, Eye, Users, Paperclip, ExternalLink,
-  PiggyBank, ShoppingCart, ShieldCheck, BarChart3
+  Trash2, UserPlus, Save, Download, Upload, Database, Eye, Users, Paperclip, ExternalLink
 } from 'lucide-react';
 import VoucherForm from './VoucherForm';
 import VoucherTemplate from './VoucherTemplate';
 import BankDetails from './BankDetails';
 import VoucherHistory from './VoucherHistory';
-import Vendors from './Vendors';
-import Budgets from './Budgets';
-import PurchaseOrders from './PurchaseOrders';
-import AuditLogs from './AuditLogs';
-import Reports from './Reports';
 import { Link } from 'react-router-dom';
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm Approval", confirmColor = "green", isProcessing }) => {
@@ -3866,78 +3860,6 @@ const Dashboard = ({ user, onLogout }) => {
                     </div>
                 )}
             </div>
-
-            <button 
-                onClick={() => setActiveView('vendors')}
-                className={`w-full flex items-center px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                    activeView === 'vendors' 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-                <div className={`p-2 rounded-lg mr-3 transition-colors ${activeView === 'vendors' ? 'bg-white text-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm'}`}>
-                    <Users size={18} />
-                </div>
-                Vendor Management
-            </button>
-
-            <button 
-                onClick={() => setActiveView('budgets')}
-                className={`w-full flex items-center px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                    activeView === 'budgets' 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-                <div className={`p-2 rounded-lg mr-3 transition-colors ${activeView === 'budgets' ? 'bg-white text-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm'}`}>
-                    <PiggyBank size={18} />
-                </div>
-                Budgeting System
-            </button>
-
-            <button 
-                onClick={() => setActiveView('purchase-orders')}
-                className={`w-full flex items-center px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                    activeView === 'purchase-orders' 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-                <div className={`p-2 rounded-lg mr-3 transition-colors ${activeView === 'purchase-orders' ? 'bg-white text-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm'}`}>
-                    <ShoppingCart size={18} />
-                </div>
-                Purchase Orders
-            </button>
-
-            {(user.role === 'admin' || user.role === 'liaison') && (
-            <button 
-                onClick={() => setActiveView('audit-logs')}
-                className={`w-full flex items-center px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                    activeView === 'audit-logs' 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-                <div className={`p-2 rounded-lg mr-3 transition-colors ${activeView === 'audit-logs' ? 'bg-white text-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm'}`}>
-                    <ShieldCheck size={18} />
-                </div>
-                Audit Logs
-            </button>
-            )}
-
-            <button 
-                onClick={() => setActiveView('reports')}
-                className={`w-full flex items-center px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                    activeView === 'reports' 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-                <div className={`p-2 rounded-lg mr-3 transition-colors ${activeView === 'reports' ? 'bg-white text-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:shadow-sm'}`}>
-                    <BarChart3 size={18} />
-                </div>
-                Reports
-            </button>
         </nav>
 
         <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-0.5">
@@ -3994,11 +3916,6 @@ const Dashboard = ({ user, onLogout }) => {
             {activeView === 'dashboard' && renderDashboardView()}
             {activeView === 'issuances' && renderIssuancesView()}
             {activeView === 'settings' && renderSettingsView()}
-            {activeView === 'vendors' && <Vendors user={user} showAlert={showAlert} />}
-            {activeView === 'budgets' && <Budgets user={user} showAlert={showAlert} />}
-            {activeView === 'purchase-orders' && <PurchaseOrders user={user} showAlert={showAlert} />}
-            {activeView === 'audit-logs' && <AuditLogs user={user} showAlert={showAlert} />}
-            {activeView === 'reports' && <Reports user={user} showAlert={showAlert} />}
             {activeView === 'banks-dashboard' && renderBanksDashboardView()}
             {activeView.startsWith('bank-') && (
                 <BankDetails 

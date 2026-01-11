@@ -3,7 +3,7 @@ import axios from '../api';
 import { 
   LogOut, Plus, Printer, RefreshCw, CheckCircle, Search, Filter, Calendar, X, 
   TrendingUp, Clock, FileCheck, Building, Settings, Edit, CreditCard, AlertTriangle,
-  LayoutDashboard, FileText, ChevronDown, ChevronRight, User, Menu,
+  LayoutDashboard, FileText, ChevronDown, ChevronRight, ChevronLeft, User, Menu,
   Trash2, UserPlus, Save, Download, Upload, Database, Eye, Users, Paperclip, ExternalLink
 } from 'lucide-react';
 import VoucherForm from './VoucherForm';
@@ -3683,10 +3683,19 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Sidebar */}
       <div className={`bg-white border-r border-gray-200 w-72 flex-shrink-0 flex flex-col transition-[margin-left] duration-300 print:hidden shadow-xl z-20 ${sidebarOpen ? '' : '-ml-72'}`}>
-        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-blue-700 text-white relative group">
           <div className="flex items-center justify-between mb-0.5">
-            <h1 className="text-xl font-extrabold tracking-tight">VMS</h1>
-            <span className="text-[10px] bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded text-white font-bold uppercase border border-white/10 shadow-sm">{user.role}</span>
+            <div className="flex items-center gap-2">
+                <h1 className="text-xl font-extrabold tracking-tight">VMS</h1>
+                <span className="text-[10px] bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded text-white font-bold uppercase border border-white/10 shadow-sm">{user.role}</span>
+            </div>
+            <button 
+                onClick={() => setSidebarOpen(false)}
+                className="lg:opacity-0 lg:group-hover:opacity-100 transition-opacity bg-white/10 hover:bg-white/20 p-1.5 rounded-lg hidden lg:block"
+                title="Collapse Sidebar"
+            >
+                <ChevronLeft size={16} />
+            </button>
           </div>
           <p className="text-[11px] text-blue-50 opacity-90 font-medium tracking-wide whitespace-nowrap">Voucher Management System</p>
         </div>
@@ -3880,6 +3889,19 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden print:w-full relative">
+        {/* Desktop Sidebar Toggle */}
+        {!sidebarOpen && (
+            <div className="hidden lg:block absolute top-4 left-4 z-50">
+                <button 
+                    onClick={() => setSidebarOpen(true)}
+                    className="bg-white p-2 rounded-lg shadow-md border border-gray-200 text-gray-500 hover:text-blue-600 hover:bg-gray-50 transition-all transform hover:scale-105"
+                    title="Expand Sidebar"
+                >
+                    <Menu size={20} />
+                </button>
+            </div>
+        )}
+
         {/* Mobile Header */}
         <header className="bg-white shadow-sm z-10 flex items-center justify-between p-4 lg:hidden">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-500 p-2 hover:bg-gray-100 rounded-lg">

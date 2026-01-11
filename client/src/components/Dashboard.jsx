@@ -3683,12 +3683,12 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* Sidebar */}
       <div className={`bg-white border-r border-gray-200 w-72 flex-shrink-0 flex flex-col transition-[margin-left] duration-300 print:hidden shadow-xl z-20 ${sidebarOpen ? '' : '-ml-72'}`}>
-        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">VMS</h1>
-            <p className="text-xs text-blue-100 opacity-80 font-medium mt-1">Voucher Management System</p>
+        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <div className="flex items-center justify-between mb-0.5">
+            <h1 className="text-xl font-extrabold tracking-tight">VMS</h1>
+            <span className="text-[10px] bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded text-white font-bold uppercase border border-white/10 shadow-sm">{user.role}</span>
           </div>
-          <span className="text-xs bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-lg text-white font-bold uppercase border border-white/10 shadow-sm">{user.role}</span>
+          <p className="text-[11px] text-blue-50 opacity-90 font-medium tracking-wide whitespace-nowrap">Voucher Management System</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-0.5 custom-scrollbar">

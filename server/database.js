@@ -227,6 +227,73 @@ async function initDb() {
             FOREIGN KEY (company_id) REFERENCES companies(id)
         )`);
 
+        await runAsync(`CREATE TABLE IF NOT EXISTS vendors (
+            id ${AUTO_INCREMENT},
+            company_id INTEGER NOT NULL,
+            name ${TEXT_TYPE} NOT NULL,
+            tax_id ${TEXT_TYPE},
+            contact_person ${TEXT_TYPE},
+            email ${TEXT_TYPE},
+            phone ${TEXT_TYPE},
+            address ${TEXT_TYPE},
+            status ${TEXT_TYPE} DEFAULT 'Active',
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (company_id) REFERENCES companies(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS budgets (
+            id ${AUTO_INCREMENT},
+            company_id INTEGER NOT NULL,
+            name ${TEXT_TYPE} NOT NULL,
+            category ${TEXT_TYPE} NOT NULL,
+            amount ${NUMBER_TYPE} NOT NULL,
+            start_date ${TEXT_TYPE},
+            end_date ${TEXT_TYPE},
+            status ${TEXT_TYPE} DEFAULT 'Active',
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (company_id) REFERENCES companies(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS purchase_orders (
+            id ${AUTO_INCREMENT},
+            company_id INTEGER NOT NULL,
+            vendor_id INTEGER NOT NULL,
+            po_number ${TEXT_TYPE} UNIQUE NOT NULL,
+            date ${TEXT_TYPE} NOT NULL,
+            expected_date ${TEXT_TYPE},
+            status ${TEXT_TYPE} DEFAULT 'Draft',
+            total_amount ${NUMBER_TYPE} DEFAULT 0,
+            notes ${TEXT_TYPE},
+            created_by INTEGER,
+            approved_by INTEGER,
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (company_id) REFERENCES companies(id),
+            FOREIGN KEY (vendor_id) REFERENCES vendors(id),
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS purchase_order_items (
+            id ${AUTO_INCREMENT},
+            po_id INTEGER NOT NULL,
+            description ${TEXT_TYPE} NOT NULL,
+            quantity ${NUMBER_TYPE} NOT NULL,
+            unit_price ${NUMBER_TYPE} NOT NULL,
+            total_price ${NUMBER_TYPE} NOT NULL,
+            FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE
+        )`);
+
+        await runAsync(`CREATE TABLE IF NOT EXISTS audit_logs (
+            id ${AUTO_INCREMENT},
+            user_id INTEGER,
+            action ${TEXT_TYPE} NOT NULL,
+            entity_type ${TEXT_TYPE},
+            entity_id ${TEXT_TYPE},
+            details ${TEXT_TYPE},
+            ip_address ${TEXT_TYPE},
+            created_at ${DATETIME_TYPE} DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )`);
+
         await runAsync(`CREATE TABLE IF NOT EXISTS bank_accounts (
             id ${AUTO_INCREMENT},
             company_id INTEGER,

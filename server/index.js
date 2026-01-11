@@ -18,6 +18,11 @@ const bankRoutes = require('./routes/banks');
 const checkRoutes = require('./routes/checks');
 const profileRoutes = require('./routes/profile');
 const categoryRoutes = require('./routes/categories');
+const vendorRoutes = require('./routes/vendors');
+const budgetRoutes = require('./routes/budgets');
+const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const auditLogRoutes = require('./routes/auditLogs');
+const reportRoutes = require('./routes/reports');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -47,6 +52,11 @@ app.use('/api', bankRoutes);
 app.use('/api', checkRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', categoryRoutes);
+app.use('/api', vendorRoutes);
+app.use('/api/budgets', budgetRoutes); // Mounted specifically to /api/budgets because router uses /
+app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Database Management Routes
 app.get('/api/backup', (req, res) => {

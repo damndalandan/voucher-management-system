@@ -213,10 +213,15 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), asy
         check_date, check_issued_date, status: initialStatus 
     } = req.body;
     
-    // Default status if not provided
-    const status = initialStatus || 'Pending Admin';
-
     const { id: user_id, role } = req.user;
+
+    // Default status logic
+    let status = initialStatus || 'Pending Admin';
+    
+    // Staff and HR must go through Liaison approval
+    if (role === 'staff' || role === 'hr') {
+        status = 'Pending Liaison';
+    }
 
     if (!company_id || !amount || !payee || !date || !payment_type) {
         return res.status(400).json({ error: "Missing required fields" });

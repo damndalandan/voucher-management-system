@@ -138,11 +138,6 @@ router.get('/vouchers', authenticateToken, (req, res) => {
             conditions.push(`v.company_id = ?`);
             params.push(company_id);
         }
-
-        // Hide vouchers not approved by liaison from admin
-        if (role === 'admin') {
-            conditions.push(`v.status != 'Pending Liaison'`);
-        }
     }
 
     if (category && category !== 'all') {
@@ -218,17 +213,10 @@ router.post('/vouchers', authenticateToken, upload.array('attachments', 50), asy
         check_date, check_issued_date, status: initialStatus 
     } = req.body;
     
-    const { id: user_id, role } = req.user;
+    // Default status if not provided
+    const status = initialStatus || 'Pending Admin';
 
-    // Default status based on role
-    let status = initialStatus;
-    if (role === 'staff' || role === 'hr') {
-        status = 'Pending Liaison';
-    } else if (role === 'liaison') {
-        status = 'Pending Admin';
-    } else if (!status) {
-        status = 'Pending Admin';
-    }
+    const { id: user_id, role } = req.user;
 
     if (!company_id || !amount || !payee || !date || !payment_type) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -515,11 +503,6 @@ router.put('/vouchers/:id', authenticateToken, upload.array('attachments', 50), 
              status = 'Pending Admin';
         }
 
-        // Enforce flow: Staff/HR edits -> Pending Liaison
-        if (role === 'staff' || role === 'hr') {
-             status = 'Pending Liaison';
-        }
-
         if (role === 'hr' && currentVoucher.status !== 'Pending Liaison') {
              return res.status(403).json({ error: "HR can only edit vouchers pending liaison approval" });
         }
@@ -772,13 +755,7 @@ router.get('/stats', authenticateToken, (req, res) => {
     });
 
     const getPending = new Promise((resolve, reject) => {
-        let statusList = "'Pending', 'Pending Liaison', 'Pending Admin'";
-        // Admin shouldn't see Pending Liaison counts either
-        if (role === 'admin') {
-            statusList = "'Pending', 'Pending Admin'";
-        }
-
-        let sql = `SELECT count(*) as count FROM vouchers WHERE status IN (${statusList})`;
+        let sql = `SELECT count(*) as count FROM vouchers WHERE status IN ('Pending', 'Pending Liaison', 'Pending Admin')`;
         if (whereClause) sql += ` AND company_id = ?`;
         db.get(sql, params, (err, row) => {
             if (err) reject(err);

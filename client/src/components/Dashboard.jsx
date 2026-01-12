@@ -1090,6 +1090,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [fileToImport, setFileToImport] = useState(null);
   const [deleteBankModalOpen, setDeleteBankModalOpen] = useState(false);
   const [bankToDelete, setBankToDelete] = useState(null);
+  const [issuanceTab, setIssuanceTab] = useState('pending'); // 'all', 'pending', 'issued'
 
   const showAlert = (message, type = 'info') => {
     setAlertModal({ 
@@ -2421,6 +2422,19 @@ const Dashboard = ({ user, onLogout }) => {
         return renderIssuancesOverview();
     }
 
+    const filteredVouchersByTab = vouchers.filter(v => {
+        if (issuanceTab === 'all') return true;
+        if (issuanceTab === 'pending') {
+            if (user.role === 'liaison') return v.status === 'Pending Liaison';
+            if (user.role === 'admin') return v.status === 'Pending Admin';
+            return ['Pending', 'Pending Liaison', 'Pending Admin'].includes(v.status);
+        }
+        if (issuanceTab === 'issued') {
+            return v.status === 'Issued';
+        }
+        return true;
+    });
+
     return (
     <div className="flex flex-col h-auto lg:h-full gap-4 animate-fade-in p-4 md:p-0">
       <div className="flex-none flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -2444,6 +2458,33 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
             )}
         </div>
+
+        {/* Status Tabs */}
+        {(user.role === 'admin' || user.role === 'liaison') && (
+            <div className="flex bg-gray-100 p-1 rounded-xl">
+                <button 
+                    onClick={() => setIssuanceTab('pending')}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${issuanceTab === 'pending' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <Clock size={16} />
+                    For Issuance
+                </button>
+                <button 
+                    onClick={() => setIssuanceTab('issued')}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${issuanceTab === 'issued' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <CheckCircle size={16} />
+                    Issued
+                </button>
+                <button 
+                    onClick={() => setIssuanceTab('all')}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 ${issuanceTab === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <List size={16} />
+                    All Vouchers
+                </button>
+            </div>
+        )}
         
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto bg-white p-2 rounded-xl shadow-sm border border-gray-100">
@@ -2541,10 +2582,10 @@ const Dashboard = ({ user, onLogout }) => {
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-                {vouchers.map((voucher) => (
+                {filteredVouchersByTab.map((voucher) => (
                 <tr key={voucher.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4 whitespace-nowrap font-mono font-bold text-gray-700 text-sm">
-                        <button 
+                        <button  
                             onClick={() => setViewingVoucher(voucher)}
                             className="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
                         >
@@ -2722,7 +2763,7 @@ const Dashboard = ({ user, onLogout }) => {
                     </td>
                 </tr>
                 ))}
-                {vouchers.length === 0 && (
+                {filteredVouchersByTab.length === 0 && (
                 <tr>
                     <td colSpan="9" className="px-6 py-12 text-center text-gray-400 italic">No vouchers found</td>
                 </tr>
